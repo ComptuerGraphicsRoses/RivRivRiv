@@ -1,7 +1,7 @@
 // javascript
 // src/Objects.js - add scroll-controlled preview distance
-
 import * as THREE from 'three';
+import { InventoryManager } from './Inventory.js';
 
 export class ObjectManager {
     constructor(scene, camera, canvas) {
@@ -13,7 +13,7 @@ export class ObjectManager {
         this.previewObject = null;
         this.buildMode = false;
 
-        this.selectedShape = 'rock1'; // 'rock1', 'rock2', 'rock3', 'spotlight'
+        this.selectedShape = 'rock1'; // 'rock1', 'rock2', 'rock3', 'bait', 'spotlight'
 
         this.collidables = [];
         this._lastPreviewPos = new THREE.Vector3();
@@ -30,6 +30,13 @@ export class ObjectManager {
         this.rotationSensitivity = 0.01;
         this.previewRotation = new THREE.Euler(0, 0, 0);
 
+        // Initialize inventory manager
+        this.inventoryManager = new InventoryManager();
+        this.inventoryManager.setLevel('level1'); // Assume level1 for now
+
+        // Callback for inventory changes
+        this.onInventoryChange = null;
+
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseClick = this.onMouseClick.bind(this);
         this.onWheel = this.onWheel.bind(this);
@@ -37,6 +44,14 @@ export class ObjectManager {
     }
 
     toggleBuildModeWithShape(shape) {
+        // Check inventory before allowing build mode
+        if (!this.inventoryManager.canPlace(shape)) {
+            const remaining = this.inventoryManager.getRemaining(shape);
+            const limit = this.inventoryManager.getLimit(shape);
+            console.log(`Cannot place ${shape}: limit reached (${limit}/${limit} used)`);
+            return false;
+        }
+
         if (this.buildMode && this.selectedShape === shape) {
             this.exitBuildMode();
         } else {
@@ -367,7 +382,16 @@ export class ObjectManager {
 
             this.placedObjects.push(spotlight);
 
+            // Record placement in inventory
+            this.inventoryManager.recordPlacement(this.selectedShape);
+
+            // Notify inventory change
+            if (this.onInventoryChange) {
+                this.onInventoryChange();
+            }
+
             console.log(`Placed spotlight #${this.placedObjects.length}`);
+
         } else {
             // Regular object placement (rocks, etc.)
             const geometry = this.createGeometry(this.selectedShape);
@@ -394,6 +418,14 @@ export class ObjectManager {
 
             this.scene.add(placedObject);
             this.placedObjects.push(placedObject);
+
+            // Record placement in inventory
+            this.inventoryManager.recordPlacement(this.selectedShape);
+
+            // Notify inventory change
+            if (this.onInventoryChange) {
+                this.onInventoryChange();
+            }
 
             this.collidables.push({
                 mesh: placedObject,
@@ -422,6 +454,15 @@ export class ObjectManager {
                 break;
             }
         }
+    }
+
+    /**
+     * Clear all placed objects and reset inventory counts
+     */
+    clearAll() {
+        this.dispose();
+        this.inventoryManager.resetCounts();
+        console.log('All objects cleared, inventory reset');
     }
 
     dispose() {
