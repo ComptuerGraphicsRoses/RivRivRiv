@@ -73,11 +73,20 @@ class FlockingFrenzy {
             this.ui.init(this.gameState);
             console.log('✓ UI initialized');
 
-            // Initialize object manager (build mode system) - ADD THIS
+            // Initialize object manager (build mode system)
             this.objectManager = new ObjectManager(this.sceneManager.scene, this.camera.camera, this.canvas);
             // Pass ObjectManager reference to camera so it can check rotation mode
             this.camera.objectManager = this.objectManager;
             console.log('✓ Object manager initialized');
+
+            // Initialize inventory UI with inventory manager from ObjectManager
+            this.ui.initInventory(this.objectManager.inventoryManager);
+
+            // Set up callback to update UI when inventory changes
+            this.objectManager.onInventoryChange = () => {
+                this.ui.updateInventory();
+            };
+            console.log('✓ Inventory UI initialized');
 
             // Start render loop
             this.animate();
