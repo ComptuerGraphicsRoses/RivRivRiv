@@ -52,7 +52,7 @@ export class CameraController {
         this.setupKeyboardControls();
     }
     
-    setupPointerLock() {
+    setupPointerLock = () => {
         this.canvas.addEventListener('click', () => {
             if (!this.isPointerLocked) {
                 this.canvas.requestPointerLock();
@@ -74,12 +74,12 @@ export class CameraController {
         });
     }
     
-    setupKeyboardControls() {
-        window.addEventListener('keydown', (event) => this.onKeyDown(event));
-        window.addEventListener('keyup', (event) => this.onKeyUp(event));
+    setupKeyboardControls = () => {
+        window.addEventListener('keydown', this.onKeyDown);
+        window.addEventListener('keyup', this.onKeyUp);
     }
     
-    onKeyDown(event) {
+    onKeyDown = (event) => {
         switch (event.key.toLowerCase()) {
             case 'w': this.moveForward = true; break;
             case 's': this.moveBackward = true; break;
@@ -95,7 +95,7 @@ export class CameraController {
         }
     }
     
-    onKeyUp(event) {
+    onKeyUp = (event) => {
         switch (event.key.toLowerCase()) {
             case 'w': this.moveForward = false; break;
             case 's': this.moveBackward = false; break;
@@ -106,7 +106,7 @@ export class CameraController {
         }
     }
     
-    animateToNamesScene() {
+    animateToNamesScene = () => {
         if (this.isAnimating) {
             // Return to original position
             this.isAnimating = false;
@@ -121,7 +121,7 @@ export class CameraController {
         }
     }
     
-    updateCameraAnimation(deltaTime) {
+    updateCameraAnimation = (deltaTime) => {
         if (!this.isAnimating) return;
         
         // Animation duration: 2 seconds
@@ -145,12 +145,12 @@ export class CameraController {
         this.camera.quaternion.slerpQuaternions(currentQuat, targetQuat, t);
     }
     
-    smoothstep(t) {
+    smoothstep = (t) => {
         // Smooth ease-in-out function
         return t * t * (3.0 - 2.0 * t);
     }
     
-    update(deltaTime) {
+    update = (deltaTime) => {
         // Handle animation if active
         if (this.isAnimating) {
             this.updateCameraAnimation(deltaTime);
@@ -183,7 +183,7 @@ export class CameraController {
         }
     }
     
-    updateAspect(aspect) {
+    updateAspect = (aspect) => {
         this.camera.aspect = aspect;
         this.camera.updateProjectionMatrix();
     }

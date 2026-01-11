@@ -22,7 +22,7 @@ export class UIManager {
         this.restartButton = document.getElementById('restart-level');
     }
     
-    init(gameState) {
+    init = (gameState) => {
         // Setup button event listeners
         this.startButton.addEventListener('click', () => {
             gameState.startSimulation();
@@ -33,7 +33,7 @@ export class UIManager {
         });
     }
     
-    toggleHelp() {
+    toggleHelp = () => {
         this.isHelpVisible = !this.isHelpVisible;
         
         if (this.isHelpVisible) {
@@ -43,7 +43,7 @@ export class UIManager {
         }
     }
     
-    update(gameState) {
+    update = (gameState) => {
         // Update score
         this.scoreDisplay.textContent = Math.floor(gameState.score);
         

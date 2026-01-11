@@ -37,10 +37,7 @@ class FlockingFrenzy {
         this.clock = new THREE.Clock();
         this.deltaTime = 0;
         
-        // Bind methods
-        this.animate = this.animate.bind(this);
-        this.onWindowResize = this.onWindowResize.bind(this);
-        this.onKeyDown = this.onKeyDown.bind(this);
+
         
         // Setup event listeners
         this.setupEventListeners();
@@ -87,7 +84,7 @@ class FlockingFrenzy {
         // UI events will be handled by UIManager
     }
     
-    onWindowResize() {
+    onWindowResize = () => {
         const width = window.innerWidth;
         const height = window.innerHeight;
         
@@ -95,7 +92,7 @@ class FlockingFrenzy {
         this.renderer.setSize(width, height);
     }
     
-    onKeyDown(event) {
+    onKeyDown = (event) => {
         switch (event.key.toLowerCase()) {
             case 'h':
                 // Toggle help menu
@@ -151,7 +148,7 @@ class FlockingFrenzy {
         this.renderer.render(this.sceneManager.scene, this.camera.camera);
     }
     
-    animate() {
+    animate = () => {
         requestAnimationFrame(this.animate);
         
         this.deltaTime = this.clock.getDelta();

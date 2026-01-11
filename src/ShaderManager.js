@@ -26,7 +26,7 @@ export class ShaderManager {
         this.time = 0;
     }
     
-    async loadShaders() {
+    loadShaders = async () => {
         // Load Phong shaders
         const phongVert = await this.loadShaderFile('./shaders/phong.vert.glsl');
         const phongFrag = await this.loadShaderFile('./shaders/phong.frag.glsl');
@@ -46,7 +46,7 @@ export class ShaderManager {
         console.log('All shaders loaded successfully');
     }
     
-    async loadShaderFile(path) {
+    loadShaderFile = async (path) => {
         try {
             const response = await fetch(path);
             if (!response.ok) {
@@ -59,7 +59,7 @@ export class ShaderManager {
         }
     }
     
-    createPhongUniforms() {
+    createPhongUniforms = () => {
         return {
             // Ambient light
             ambientColor: { value: new THREE.Color(0x404040) },
@@ -88,7 +88,7 @@ export class ShaderManager {
         };
     }
     
-    createUnderwaterUniforms() {
+    createUnderwaterUniforms = () => {
         return {
             // Time for animation
             time: { value: 0.0 },
@@ -113,7 +113,7 @@ export class ShaderManager {
         };
     }
     
-    setActiveShader(shaderName) {
+    setActiveShader = (shaderName) => {
         if (this.shaders[shaderName]) {
             this.activeShader = shaderName;
         } else {
@@ -121,7 +121,7 @@ export class ShaderManager {
         }
     }
     
-    getActiveMaterial() {
+    getActiveMaterial = () => {
         const shader = this.shaders[this.activeShader];
         
         // Create material if not exists
@@ -137,7 +137,7 @@ export class ShaderManager {
         return shader.material;
     }
     
-    updateUniforms(camera, lights, deltaTime) {
+    updateUniforms = (camera, lights, deltaTime) => {
         this.time += deltaTime;
         
         // Update Phong shader uniforms

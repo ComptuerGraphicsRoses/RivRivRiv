@@ -22,7 +22,7 @@ export class SceneManager {
         this.predators = [];
     }
     
-    async init(shaderManager) {
+    init = async (shaderManager) => {
         // Setup lighting
         this.setupLights();
         
@@ -33,7 +33,7 @@ export class SceneManager {
         this.createTeamNamesScene();
     }
     
-    setupLights() {
+    setupLights = () => {
         // Ambient light
         this.lights.ambient = new THREE.AmbientLight(0x404040, 1.0);
         this.scene.add(this.lights.ambient);
@@ -63,7 +63,7 @@ export class SceneManager {
         this.scene.add(spotLightHelper);
     }
     
-    createTestScene() {
+    createTestScene = () => {
         // Ground plane
         const groundGeometry = new THREE.PlaneGeometry(50, 50);
         const groundMaterial = new THREE.MeshStandardMaterial({
@@ -119,7 +119,7 @@ export class SceneManager {
         this.objects.push(cone);
     }
     
-    createTeamNamesScene() {
+    createTeamNamesScene = () => {
         // This will be located at a separate area (e.g., y = -50)
         // For now, create placeholder text using 3D objects
         const nameGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -131,13 +131,13 @@ export class SceneManager {
         this.scene.add(namePlaceholder);
     }
     
-    updateShader(shaderManager) {
+    updateShader = (shaderManager) => {
         // This will be used to switch materials when shader changes
         // For now using standard materials, will integrate custom shaders later
         console.log('Scene shader updated to:', shaderManager.activeShader);
     }
     
-    update(deltaTime) {
+    update = (deltaTime) => {
         // Animate test objects (simple rotation for demonstration)
         this.objects.forEach((obj, index) => {
             obj.rotation.y += deltaTime * (0.5 + index * 0.2);

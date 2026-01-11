@@ -26,7 +26,7 @@ export class GameState {
         this.requiredSurvivalPercentage = 0.6; // 60%
     }
     
-    startSimulation() {
+    startSimulation = () => {
         if (this.phase !== 'PREPARATION') return;
         
         this.phase = 'SIMULATION';
@@ -36,7 +36,7 @@ export class GameState {
         console.log('Simulation started!');
     }
     
-    restartLevel() {
+    restartLevel = () => {
         this.phase = 'PREPARATION';
         this.score = this.startingScore;
         this.timeRemaining = this.maxTime;
@@ -47,17 +47,17 @@ export class GameState {
         console.log('Level restarted');
     }
     
-    onFishDeath() {
+    onFishDeath = () => {
         this.fishAlive = Math.max(0, this.fishAlive - 1);
         this.score -= 10;
         this.score = Math.max(0, this.score);
     }
     
-    onFishReachedGoal() {
+    onFishReachedGoal = () => {
         this.fishSaved++;
     }
     
-    update(deltaTime) {
+    update = (deltaTime) => {
         if (this.phase !== 'SIMULATION') return;
         
         // Update timer
@@ -74,7 +74,7 @@ export class GameState {
         }
     }
     
-    evaluateLevel() {
+    evaluateLevel = () => {
         this.phase = 'EVALUATION';
         
         const survivalRate = this.fishSaved / this.fishTotal;
