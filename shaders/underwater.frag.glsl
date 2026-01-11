@@ -1,11 +1,14 @@
 // Underwater Stylized Fragment Shader (NPR - Non-Photorealistic Rendering)
 
+precision mediump float;
+
 uniform float time;
 uniform vec3 waterColor;
 uniform vec3 deepWaterColor;
 uniform float fogDensity;
 uniform float causticStrength;
 uniform float causticScale;
+uniform vec3 cameraPosition;
 
 varying vec3 vNormal;
 varying vec3 vPosition;

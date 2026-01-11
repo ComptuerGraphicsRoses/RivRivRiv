@@ -1,5 +1,7 @@
 // Phong Lighting Fragment Shader (Realistic Lighting)
 
+precision mediump float;
+
 uniform vec3 ambientColor;
 uniform float ambientIntensity;
 
