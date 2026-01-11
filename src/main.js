@@ -9,6 +9,7 @@ import { SceneManager } from './Scene.js';
 import { ShaderManager } from './ShaderManager.js';
 import { UIManager } from './UI.js';
 import { GameState } from './GameState.js';
+import { ObjectManager } from './Objects.js';
 
 class FlockingFrenzy {
     constructor() {
@@ -72,6 +73,10 @@ class FlockingFrenzy {
             this.ui.init(this.gameState);
             console.log('✓ UI initialized');
 
+            // Initialize object manager (build mode system) - ADD THIS
+            this.objectManager = new ObjectManager(this.sceneManager.scene, this.camera.camera);
+            console.log('✓ Object manager initialized');
+
             // Start render loop
             this.animate();
             console.log('✓ Render loop started');
@@ -124,6 +129,20 @@ class FlockingFrenzy {
                 console.log('Switched to Underwater shader (stylized)');
                 break;
 
+            case '3':
+                // Toggle build mode
+                if (this.objectManager) {
+                    const isActive = this.objectManager.toggleBuildModeWithShape('cube');
+                }
+                break;
+
+            case '4':
+                // Toggle build mode
+                if (this.objectManager) {
+                    const isActive = this.objectManager.toggleBuildModeWithShape('cube2');
+                }
+                break;
+
             case 'n':
                 // Animate camera to team names scene
                 this.camera.animateToNamesScene();
@@ -149,6 +168,11 @@ class FlockingFrenzy {
 
         // Update UI
         this.ui.update(this.gameState);
+
+        // Update object manager (build mode)
+        if (this.objectManager) {
+            this.objectManager.update(deltaTime);
+        }
 
         // Update shader uniforms
         this.shaderManager.updateUniforms(
