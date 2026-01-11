@@ -48,6 +48,13 @@
   - *TODO:* Replace with game-specific objects (Fish, Rock, Shark, Bait, etc.)
 
 ---
+### BUGS
+
+- [ BUG ] Shaders doesn't work (or change, normal view is ok but underwater shader doesnt work when I press 2)
+- [ BUG ] Help menu appears but top of it is cut off, we can not see everything
+- [ Scoring system framework is TO BE REVIEWED AND TESTED ]
+
+---
 
 ### ⬜ Not Started (Next Phase)
 
