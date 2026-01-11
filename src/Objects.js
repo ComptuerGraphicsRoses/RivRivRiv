@@ -116,6 +116,8 @@ export class ObjectManager {
                 return new THREE.BoxGeometry(3, 2.5, 2.5); // Medium rock
             case 'rock3':
                 return new THREE.BoxGeometry(4, 3, 3); // Large rock
+            case 'bait':
+                return new THREE.SphereGeometry(0.4, 16, 16); // Simple sphere for bait
             case 'spotlight':
                 // Visual representation of spotlight - small cone pointing down
                 return new THREE.ConeGeometry(0.5, 1, 8);
@@ -141,6 +143,8 @@ export class ObjectManager {
                 return 0x696969; // Gray
             case 'rock3':
                 return 0x556b2f; // Olive green
+            case 'bait':
+                return 0xff69b4; // Pink for bait
             case 'spotlight':
                 return 0xffaa00; // Orange for spotlight body
             default:
@@ -156,6 +160,8 @@ export class ObjectManager {
                 return 2.5;
             case 'rock3':
                 return 3;
+            case 'bait':
+                return 0.8;
             case 'spotlight':
                 return 1; // Small size for spotlight
             default:

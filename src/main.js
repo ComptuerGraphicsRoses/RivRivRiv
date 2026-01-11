@@ -153,6 +153,13 @@ class FlockingFrenzy {
                 break;
 
             case '6':
+                // Place Bait
+                if (this.objectManager) {
+                    this.objectManager.toggleBuildModeWithShape('bait');
+                }
+                break;
+
+            case '7':
                 // Place Spotlight
                 if (this.objectManager) {
                     this.objectManager.toggleBuildModeWithShape('spotlight');
