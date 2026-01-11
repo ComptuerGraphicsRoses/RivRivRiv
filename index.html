@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flocking Frenzy - BBM 412 Computer Graphics Project</title>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Three.js Import Map Configuration -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+    </script>
+</head>
+<body>
+    <!-- Main WebGL Canvas -->
+    <canvas id="canvas"></canvas>
+    
+    <!-- HUD Overlay -->
+    <div id="hud">
+        <div id="score-display" class="hud-element">
+            <span class="label">Score:</span>
+            <span id="score-value" class="value">100</span>
+        </div>
+        
+        <div id="timer-display" class="hud-element">
+            <span class="label">Time:</span>
+            <span id="timer-value" class="value">20.0</span>
+        </div>
+        
+        <div id="survival-display" class="hud-element">
+            <span id="survival-value" class="value">Alive: 100/100 (100%)</span>
+        </div>
+    </div>
+    
+    <!-- Help Menu (Hidden by default, toggle with H key) -->
+    <div id="help-menu" class="hidden">
+        <div class="help-content">
+            <h1>FLOCKING FRENZY - HELP</h1>
+            
+            <h2>OBJECTIVE</h2>
+            <p>Guide the fish school to the goal region. At least 60% must survive!</p>
+            
+            <h2>CONTROLS</h2>
+            <h3>Camera Movement:</h3>
+            <ul>
+                <li><kbd>W</kbd>/<kbd>A</kbd>/<kbd>S</kbd>/<kbd>D</kbd> - Move horizontally</li>
+                <li><kbd>Space</kbd> - Move up</li>
+                <li><kbd>Shift</kbd> - Move down</li>
+                <li><kbd>Mouse</kbd> - Look around</li>
+                <li><kbd>ESC</kbd> - Release pointer lock</li>
+            </ul>
+            
+            <h3>General:</h3>
+            <ul>
+                <li><kbd>1</kbd> - Phong shader (realistic lighting)</li>
+                <li><kbd>2</kbd> - Underwater shader (stylized)</li>
+                <li><kbd>H</kbd> - Toggle this help menu</li>
+                <li><kbd>N</kbd> - View team member names</li>
+            </ul>
+            
+            <h2>GAMEPLAY</h2>
+            <h3>Preparation Phase:</h3>
+            <p>Place objects strategically before starting the simulation.</p>
+            
+            <h3>Item Types:</h3>
+            <ul>
+                <li><strong>Rock</strong> - Fish avoid it</li>
+                <li><strong>Spiked Rock</strong> - Fish die on impact</li>
+                <li><strong>Bait</strong> - Attracts fish (place at goal!)</li>
+                <li><strong>Current</strong> - Pushes fish in arrow direction</li>
+                <li><strong>Spotlight</strong> - Fish avoid light (use to block paths)</li>
+                <li><strong>Predator</strong> - Hunts and eats fish</li>
+            </ul>
+            
+            <h2>SCORING</h2>
+            <ul>
+                <li>Start with 100 points</li>
+                <li>Lose 10 points per fish death</li>
+                <li>Lose 0.5 points per second</li>
+                <li>Green score = winning, Red score = danger</li>
+            </ul>
+            
+            <h2>WIN CONDITION</h2>
+            <p>At least 60% of fish reach the goal within 20 seconds.</p>
+            
+            <p class="help-footer">Press <kbd>H</kbd> to close this menu.</p>
+        </div>
+    </div>
+    
+    <!-- UI Panel for Inventory and Controls -->
+    <div id="ui-panel" class="hidden">
+        <div id="inventory-panel">
+            <h3>Inventory</h3>
+            <div id="inventory-items"></div>
+        </div>
+        
+        <div id="object-controls" class="hidden">
+            <h3>Object Transform</h3>
+            <div id="transform-sliders"></div>
+        </div>
+        
+        <div id="game-controls">
+            <button id="start-simulation" disabled>Start Simulation</button>
+            <button id="restart-level">Restart Level</button>
+        </div>
+    </div>
+    
+    <!-- Main Application Entry Point -->
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
