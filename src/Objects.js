@@ -4,18 +4,18 @@
 import * as THREE from 'three';
 
 export class ObjectManager {
-    constructor(scene, camera) {
+    constructor(scene, camera, canvas) {
         this.scene = scene;
         this.camera = camera;
+        this.canvas = canvas;
 
         this.placedObjects = [];
         this.previewObject = null;
         this.buildMode = false;
 
-        this.selectedShape = 'cube'; // 'cube' or 'cube2'
+        this.selectedShape = 'rock1'; // 'rock1', 'rock2', 'rock3', 'spotlight'
 
         this.collidables = [];
-        this.minDistanceBetweenObjects = 1;
         this._lastPreviewPos = new THREE.Vector3();
         this._previewMoveThreshold = 0.05;
 
@@ -25,9 +25,15 @@ export class ObjectManager {
         this.maxPreviewDistance = 30;
         this.distanceStep = 0.5;
 
+        // Rotation control
+        this.rotationMode = false;
+        this.rotationSensitivity = 0.01;
+        this.previewRotation = new THREE.Euler(0, 0, 0);
+
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseClick = this.onMouseClick.bind(this);
         this.onWheel = this.onWheel.bind(this);
+        this.onContextMenu = this.onContextMenu.bind(this);
     }
 
     toggleBuildModeWithShape(shape) {
@@ -57,6 +63,7 @@ export class ObjectManager {
         window.addEventListener('mousemove', this.onMouseMove);
         window.addEventListener('click', this.onMouseClick);
         window.addEventListener('wheel', this.onWheel, {passive: false});
+        window.addEventListener('contextmenu', this.onContextMenu);
         this.buildMode = true;
     }
 
@@ -70,6 +77,8 @@ export class ObjectManager {
         window.removeEventListener('mousemove', this.onMouseMove);
         window.removeEventListener('click', this.onMouseClick);
         window.removeEventListener('wheel', this.onWheel);
+        window.removeEventListener('contextmenu', this.onContextMenu);
+        this.rotationMode = false;
         this.buildMode = false;
     }
 
@@ -93,23 +102,65 @@ export class ObjectManager {
         this.updatePreviewPosition(true);
     }
 
+    onContextMenu(event) {
+        // Prevent default right-click context menu in build mode
+        event.preventDefault();
+    }
+
     createGeometry(shape) {
-        if (shape === 'cube2') return new THREE.BoxGeometry(2, 2, 2);
-        return new THREE.BoxGeometry(2, 2, 2);
+        // Placeholder geometries - replace with actual rock models later
+        switch (shape) {
+            case 'rock1':
+                return new THREE.BoxGeometry(2, 2, 2); // Small rock
+            case 'rock2':
+                return new THREE.BoxGeometry(3, 2.5, 2.5); // Medium rock
+            case 'rock3':
+                return new THREE.BoxGeometry(4, 3, 3); // Large rock
+            case 'spotlight':
+                // Visual representation of spotlight - small cone pointing down
+                return new THREE.ConeGeometry(0.5, 1, 8);
+            default:
+                return new THREE.BoxGeometry(2, 2, 2);
+        }
     }
 
     getPreviewColor(shape) {
-        if (shape === 'cube2') return 0x00ff00;
-        return 0x00ff00;
+        switch (shape) {
+            case 'spotlight':
+                return 0xffff00; // Yellow for spotlight preview
+            default:
+                return 0x00ff00;
+        }
     }
 
     getPlacedColor(shape) {
-        if (shape === 'cube2') return 0x0000ff;
-        return 0xff6600;
+        switch (shape) {
+            case 'rock1':
+                return 0x8b7355; // Light brown
+            case 'rock2':
+                return 0x696969; // Gray
+            case 'rock3':
+                return 0x556b2f; // Olive green
+            case 'spotlight':
+                return 0xffaa00; // Orange for spotlight body
+            default:
+                return 0x8b7355;
+        }
     }
 
     getShapeSize(shape) {
-        return 2;
+        switch (shape) {
+            case 'rock1':
+                return 2;
+            case 'rock2':
+                return 2.5;
+            case 'rock3':
+                return 3;
+            case 'spotlight':
+                return 1; // Small size for spotlight
+            default:
+                return 2;
+        }
     }
 
     indexCollidables() {
@@ -179,11 +230,8 @@ export class ObjectManager {
 
     checkCollision(position) {
         const objectSize = this.getShapeSize(this.selectedShape);
-        const halfSize = objectSize * 0.5;
+        const halfSize = objectSize * 0.6;
         const previewSphereRadius = Math.sqrt(3 * halfSize * halfSize);
-
-        const minDistance = objectSize + this.minDistanceBetweenObjects;
-
 
         for (const p of this.placedObjects) {
             if (position.distanceTo(p.position) < this.minDistance) {
@@ -212,8 +260,8 @@ export class ObjectManager {
             if (previewBox.intersectsBox(entry.worldBBox)) return true;
         }
 
-        if (position.y < 1) return true;
-        return false;
+        return position.y < 1;
+
     }
 
     updatePreviewColor(hasCollision) {
@@ -222,55 +270,137 @@ export class ObjectManager {
         else this.previewObject.material.color.setHex(this.getPreviewColor(this.selectedShape));
     }
 
-    onMouseMove() {
-        this.updatePreviewPosition();
-    }
+        onMouseMove(event) {
+            if (this.rotationMode && this.previewObject) {
+                // Use movementX/Y from pointer lock for rotation
+                // For spotlight/cone: use Z and X axes instead of Y and X
+                if (this.selectedShape === 'spotlight') {
+                    // Mouse X controls Z-axis (sideways tilt)
+                    // Mouse Y controls X-axis (forward/backward tilt)
+                    this.previewRotation.z += event.movementX * this.rotationSensitivity;
+                    this.previewRotation.x += event.movementY * this.rotationSensitivity;
+                } else {
+                    // For regular objects: use Y and X axes
+                    this.previewRotation.y += event.movementX * this.rotationSensitivity;
+                    this.previewRotation.x += event.movementY * this.rotationSensitivity;
+                }
 
-    onMouseClick() {
-        if (!this.buildMode || !this.previewObject) return;
-
-        const hasCollision = this.checkCollision(this.previewObject.position);
-        if (hasCollision) {
-            console.log('Cannot place object here - collision detected!');
-            return;
+                this.previewObject.rotation.copy(this.previewRotation);
+            } else {
+                this.updatePreviewPosition();
+            }
         }
-        this.placeObject();
+
+    onMouseClick(event) {
+        if (event.button === 0) { // Left click - place object
+            if (!this.buildMode || !this.previewObject) return;
+
+            const hasCollision = this.checkCollision(this.previewObject.position);
+            if (hasCollision) {
+                console.log('Cannot place object here - collision detected!');
+                return;
+            }
+            this.placeObject();
+        } else if (event.button === 2) { // Right click - toggle rotation mode
+            event.preventDefault();
+            this.rotationMode = !this.rotationMode;
+            console.log(`Rotation mode: ${this.rotationMode ? 'ON' : 'OFF'}`);
+        }
     }
 
     placeObject() {
         if (!this.previewObject) return;
 
-        const geometry = this.createGeometry(this.selectedShape);
-        const material = new THREE.MeshStandardMaterial({
-            color: this.getPlacedColor(this.selectedShape),
-            metalness: 0.3,
-            roughness: 0.7
-        });
+        // Handle spotlight differently from regular objects
+        if (this.selectedShape === 'spotlight') {
+            // Create actual THREE.SpotLight
+            const spotlight = new THREE.SpotLight(0xffffff, 2.0);
+            spotlight.position.copy(this.previewObject.position);
+            spotlight.rotation.copy(this.previewObject.rotation);
+            spotlight.intensity = 6.0;
+            spotlight.angle = Math.PI / 9;
+            spotlight.penumbra = 0.2;
+            spotlight.decay = 1;
+            spotlight.distance = 0;
+            spotlight.castShadow = true;
 
-        const placedObject = new THREE.Mesh(geometry, material);
-        placedObject.position.copy(this.previewObject.position);
-        placedObject.userData.type = this.selectedShape;
-        placedObject.userData.placedAt = Date.now();
+            // Calculate target position based on rotation
+            // Create a direction vector pointing down in local space
+            const direction = new THREE.Vector3(0, -1, 0);
+            // Apply the spotlight's rotation to the direction
+            direction.applyEuler(this.previewObject.rotation);
+            // Set target at a distance along that direction
+            const targetDistance = 10;
+            const target = new THREE.Object3D();
+            target.position.copy(spotlight.position).add(direction.multiplyScalar(targetDistance));
 
-        placedObject.geometry.computeBoundingBox();
-        placedObject.geometry.computeBoundingSphere();
+            this.scene.add(target);
+            spotlight.target = target;
 
-        const worldBBox = placedObject.geometry.boundingBox.clone().applyMatrix4(placedObject.matrixWorld);
+            this.scene.add(spotlight);
+            this.scene.add(spotlight.target);
 
-        this.scene.add(placedObject);
-        this.placedObjects.push(placedObject);
+            // Create a visual indicator (cone mesh) - non-collidable
+            const visualCone = new THREE.Mesh(
+                new THREE.ConeGeometry(0.5, 1.5, 8),
+                new THREE.MeshBasicMaterial({
+                    color: 0xffaa00,
+                    transparent: true,
+                    opacity: 0.7
+                })
+            );
+            visualCone.position.copy(this.previewObject.position);
+            visualCone.rotation.copy(this.previewObject.rotation);
+            this.scene.add(visualCone);
 
-        this.collidables.push({
-            mesh: placedObject,
-            localBBox: placedObject.geometry.boundingBox.clone(),
-            localSphere: placedObject.geometry.boundingSphere.clone(),
-            worldBBox,
-            needsWorldBBoxUpdate: false
-        });
+            // Store spotlight with metadata
+            spotlight.userData.type = 'spotlight';
+            spotlight.userData.placedAt = Date.now();
+            spotlight.userData.visual = visualCone;
+            spotlight.userData.target = target;
 
-        console.log(`Placed ${this.selectedShape} #${this.placedObjects.length}`);
+            this.placedObjects.push(spotlight);
 
-        this.exitBuildMode(); // Exit build mode after placing
+            console.log(`Placed spotlight #${this.placedObjects.length}`);
+        } else {
+            // Regular object placement (rocks, etc.)
+            const geometry = this.createGeometry(this.selectedShape);
+            const material = new THREE.MeshStandardMaterial({
+                color: this.getPlacedColor(this.selectedShape),
+                metalness: 0.3,
+                roughness: 0.7
+            });
+
+            const placedObject = new THREE.Mesh(geometry, material);
+            placedObject.position.copy(this.previewObject.position);
+            placedObject.rotation.copy(this.previewObject.rotation);
+            placedObject.userData.type = this.selectedShape;
+            placedObject.userData.placedAt = Date.now();
+
+            // Enable shadows
+            placedObject.castShadow = true;
+            placedObject.receiveShadow = true;
+
+            placedObject.geometry.computeBoundingBox();
+            placedObject.geometry.computeBoundingSphere();
+
+            const worldBBox = placedObject.geometry.boundingBox.clone().applyMatrix4(placedObject.matrixWorld);
+
+            this.scene.add(placedObject);
+            this.placedObjects.push(placedObject);
+
+            this.collidables.push({
+                mesh: placedObject,
+                localBBox: placedObject.geometry.boundingBox.clone(),
+                localSphere: placedObject.geometry.boundingSphere.clone(),
+                worldBBox,
+                needsWorldBBoxUpdate: false
+            });
+
+            console.log(`Placed ${this.selectedShape} #${this.placedObjects.length}`);
+        }
+
+        this.exitBuildMode();
     }
 
     update(deltaTime) {
@@ -293,6 +423,18 @@ export class ObjectManager {
 
         this.placedObjects.forEach(obj => {
             this.scene.remove(obj);
+
+            // Handle spotlight cleanup
+            if (obj.userData.type === 'spotlight') {
+                if (obj.userData.visual) {
+                    this.scene.remove(obj.userData.visual);
+                    if (obj.userData.visual.geometry) obj.userData.visual.geometry.dispose();
+                    if (obj.userData.visual.material) obj.userData.visual.material.dispose();
+                }
+                if (obj.userData.target) this.scene.remove(obj.userData.target);
+            }
+
+            // Handle regular object cleanup
             if (obj.geometry) obj.geometry.dispose();
             if (obj.material) obj.material.dispose();
         });

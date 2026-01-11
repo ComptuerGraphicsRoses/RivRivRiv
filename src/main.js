@@ -74,7 +74,9 @@ class FlockingFrenzy {
             console.log('✓ UI initialized');
 
             // Initialize object manager (build mode system) - ADD THIS
-            this.objectManager = new ObjectManager(this.sceneManager.scene, this.camera.camera);
+            this.objectManager = new ObjectManager(this.sceneManager.scene, this.camera.camera, this.canvas);
+            // Pass ObjectManager reference to camera so it can check rotation mode
+            this.camera.objectManager = this.objectManager;
             console.log('✓ Object manager initialized');
 
             // Start render loop
@@ -130,16 +132,30 @@ class FlockingFrenzy {
                 break;
 
             case '3':
-                // Toggle build mode
+                // Place Small Rock
                 if (this.objectManager) {
-                    const isActive = this.objectManager.toggleBuildModeWithShape('cube');
+                    this.objectManager.toggleBuildModeWithShape('rock1');
                 }
                 break;
 
             case '4':
-                // Toggle build mode
+                // Place Medium Rock
                 if (this.objectManager) {
-                    const isActive = this.objectManager.toggleBuildModeWithShape('cube2');
+                    this.objectManager.toggleBuildModeWithShape('rock2');
+                }
+                break;
+
+            case '5':
+                // Place Large Rock
+                if (this.objectManager) {
+                    this.objectManager.toggleBuildModeWithShape('rock3');
+                }
+                break;
+
+            case '6':
+                // Place Spotlight
+                if (this.objectManager) {
+                    this.objectManager.toggleBuildModeWithShape('spotlight');
                 }
                 break;
 

@@ -9,6 +9,9 @@ export class CameraController {
     constructor(canvas) {
         this.canvas = canvas;
         
+        // Reference to ObjectManager (set later by main.js)
+        this.objectManager = null;
+
         // Create perspective camera
         this.camera = new THREE.PerspectiveCamera(
             75, // FOV
@@ -65,6 +68,11 @@ export class CameraController {
         
         document.addEventListener('mousemove', (event) => {
             if (this.isPointerLocked && !this.isAnimating) {
+                // Skip camera rotation if ObjectManager is in rotation mode
+                if (this.objectManager && this.objectManager.rotationMode) {
+                    return;
+                }
+
                 this.yaw -= event.movementX * this.lookSpeed;
                 this.pitch -= event.movementY * this.lookSpeed;
                 
