@@ -59,6 +59,17 @@ class FlockingFrenzy {
             await this.sceneManager.init(this.shaderManager);
             console.log('✓ Scene initialized');
             
+            // Spawn fish school
+            this.sceneManager.spawnFishSchool(80);
+            
+            // Create bait (goal)
+            this.sceneManager.createBait(new THREE.Vector3(15, 3, 0));
+            
+            // Add test obstacles for fish to avoid
+            this.sceneManager.addObstacle(new THREE.Vector3(5, 3, 0), 1.5);
+            this.sceneManager.addObstacle(new THREE.Vector3(10, 4, 5), 1.0);
+            this.sceneManager.addObstacle(new THREE.Vector3(8, 2, -3), 1.2);
+            
             // Setup UI
             this.ui.init(this.gameState);
             console.log('✓ UI initialized');
