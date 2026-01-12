@@ -625,6 +625,31 @@ export class ObjectManager {
         }
     }
 
+    /**
+     * Toggle all spotlights on/off
+     * @returns {boolean} True if spotlights were toggled, false if no spotlights exist
+     */
+    toggleAllSpotlights() {
+        const spotlights = this.placedObjects.filter(obj => obj.userData.type === 'spotlight');
+
+        if (spotlights.length === 0) {
+            console.log('No spotlights placed');
+            return false;
+        }
+
+        // Toggle all spotlights
+        spotlights.forEach(spotlight => {
+            spotlight.visible = !spotlight.visible;
+            if (spotlight.userData.visual) {
+                spotlight.userData.visual.visible = spotlight.visible;
+            }
+        });
+
+        const status = spotlights[0].visible ? 'ON' : 'OFF';
+        console.log(`💡 ${spotlights.length} spotlight(s) toggled ${status}`);
+        return true;
+    }
+
     markMeshTransformChanged(mesh) {
         for (const entry of this.collidables) {
             if (entry.mesh === mesh) {
