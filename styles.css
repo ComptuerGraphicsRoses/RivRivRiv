@@ -303,6 +303,102 @@ body {
     display: none !important;
 }
 
+/* Inventory Hotbar */
+#inventory-hotbar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid rgba(139, 139, 139, 0.5);
+    z-index: 300;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+}
+
+#inventory-slots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.inventory-slot {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    background: rgba(139, 139, 139, 0.3);
+    border: 2px solid rgba(139, 139, 139, 0.6);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.inventory-slot:hover {
+    background: rgba(139, 139, 139, 0.5);
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.inventory-slot.depleted {
+    opacity: 0.4;
+    border-color: rgba(255, 0, 0, 0.5);
+}
+
+.inventory-slot .item-icon {
+    font-size: 32px;
+    margin-bottom: 2px;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7));
+}
+
+.inventory-slot .item-name {
+    font-size: 9px;
+    color: #fff;
+    text-transform: uppercase;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
+    text-align: center;
+    line-height: 1;
+}
+
+.inventory-slot .item-count {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 2px 2px 0px #000,
+                 -1px -1px 0px #000,
+                 1px -1px 0px #000,
+                 -1px 1px 0px #000,
+                 1px 1px 0px #000;
+    font-family: 'Courier New', monospace;
+    pointer-events: none;
+}
+
+.inventory-slot .item-count.low {
+    color: #fbbf24;
+}
+
+.inventory-slot .item-count.depleted {
+    color: #ef4444;
+}
+
+.inventory-slot .keybind {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.6);
+    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.8);
+}
+
 /* Animations */
 @keyframes pulse {
     0%, 100% {
