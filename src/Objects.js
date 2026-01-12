@@ -591,26 +591,6 @@ export class ObjectManager {
     }
 
     /**
-     * Get all bait object positions and metadata for fish AI
-     * @returns {Array} Array of bait objects with position, type, and detection info
-     */
-    getBaitObjects() {
-        return this.placedObjects
-            .filter(obj => obj.userData.attributes?.isAttractive === true)
-            .map(obj => {
-                const attrs = obj.userData.attributes;
-                return {
-                    position: obj.position.clone(),
-                    type: obj.userData.type,
-                    object: obj,
-                    attractionRadius: attrs.attractionRadius || 10,
-                    attractionStrength: attrs.attractionStrength || 1.5,
-                    nutritionValue: attrs.nutritionValue || 0
-                };
-            });
-    }
-
-    /**
      * Get object attributes for collision detection (for Fish.js)
      * @param {THREE.Object3D} object - The collided object
      * @returns {PlaceableObject|null} Object attributes or null
@@ -648,15 +628,6 @@ export class ObjectManager {
         const status = spotlights[0].visible ? 'ON' : 'OFF';
         console.log(`💡 ${spotlights.length} spotlight(s) toggled ${status}`);
         return true;
-    }
-
-    markMeshTransformChanged(mesh) {
-        for (const entry of this.collidables) {
-            if (entry.mesh === mesh) {
-                entry.needsWorldBBoxUpdate = true;
-                break;
-            }
-        }
     }
 
     /**
