@@ -5,12 +5,13 @@
 
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GroundedSkybox } from 'three/addons/objects/GroundedSkybox.js';
 
 export class SceneManager {
     constructor() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x001a2e); // Deep water color
-        this.scene.fog = new THREE.Fog(0x001a2e, 10, 100);
+        this.scene.background = new THREE.Color(0x158DA0); // Deep water color
+        this.scene.fog = new THREE.Fog(0x158DA0, 0, 20);
 
         this.lights = {
             directional: null,
@@ -21,17 +22,23 @@ export class SceneManager {
         this.objects = [];
         this.fish = [];
         this.predators = [];
+        this.skybox = null;
     }
 
     init = async (shaderManager) => {
         // Setup lighting
         this.setupLights();
 
+        // Setup skybox
+        await this.setupSkybox();
+
         // Load Scene.fbx model
         await this.loadSceneModel();
 
         // Create placeholder geometry for testing
-        this.createTestScene();
+        //this.createTestScene();
+
+        this.createGroundPlane();
 
         // Create team names scene (in separate area)
         this.createTeamNamesScene();
@@ -42,8 +49,9 @@ export class SceneManager {
 
         return new Promise((resolve, reject) => {
             loader.load(
-                '../assets/models/Scene2.fbx',
+                '../assets/models/Scene.fbx',
                 (fbx) => {
+                    fbx.scale.set(0.01, 0.01, 0.01);
                     this.scene.add(fbx);
                     console.log('✓ Scene.fbx loaded with textures');
                     resolve(fbx);
@@ -59,9 +67,33 @@ export class SceneManager {
         });
     }
 
+    setupSkybox = async () => {
+        const loader = new THREE.TextureLoader();
+
+        return new Promise((resolve, reject) => {
+            loader.load(
+                '../assets/textures/skyrender.png',
+                (texture) => {
+                    // Create GroundedSkybox with the loaded texture
+                    this.skybox = new GroundedSkybox(texture, 15, 15);
+                    this.skybox.position.y = 10; // Adjust height as needed
+                    this.scene.add(this.skybox);
+
+                    console.log('✓ Skybox loaded successfully');
+                    resolve(this.skybox);
+                },
+                undefined,
+                (error) => {
+                    console.error('Error loading skybox texture:', error);
+                    reject(error);
+                }
+            );
+        });
+    }
+
     setupLights = () => {
         // Ambient light
-        this.lights.ambient = new THREE.AmbientLight(0x404040, 1.0);
+        this.lights.ambient = new THREE.AmbientLight(0x7296DD, 1.5);
         this.scene.add(this.lights.ambient);
 
         // Directional light (sun)
@@ -90,17 +122,8 @@ export class SceneManager {
     }
 
     createTestScene = () => {
-        // Ground plane
-        // const groundGeometry = new THREE.PlaneGeometry(50, 50);
-        // const groundMaterial = new THREE.MeshStandardMaterial({
-        //     color: 0x2a4858,
-        //     roughness: 0.8,
-        //     metalness: 0.2
-        // });
-        // const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        // ground.rotation.x = -Math.PI / 2;
-        // ground.receiveShadow = true;
-        // this.scene.add(ground);
+        // Ground plane with sandy texture
+        this.createGroundPlane();
 
         // Test cube (Morphology #1 for BBM 412)
         const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
@@ -143,6 +166,30 @@ export class SceneManager {
         cone.receiveShadow = true;
         this.scene.add(cone);
         this.objects.push(cone);
+    }
+
+    createGroundPlane() {
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+
+        // Load sandy texture
+        const textureLoader = new THREE.TextureLoader();
+        const sandyTexture = textureLoader.load('../assets/models/SandyDry_S.jpg');
+
+        // Configure texture wrapping and repeat for better appearance
+        sandyTexture.wrapS = THREE.RepeatWrapping;
+        sandyTexture.wrapT = THREE.RepeatWrapping;
+        sandyTexture.repeat.set(20, 20); // Adjust repeat for better tiling
+
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            map: sandyTexture,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.position.y = 0.01;
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        this.scene.add(ground);
     }
 
     createTeamNamesScene = () => {
