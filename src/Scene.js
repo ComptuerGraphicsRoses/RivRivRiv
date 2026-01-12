@@ -5,6 +5,8 @@
 
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { Fish } from './Fish.js';
+import { FlockingSystem } from './FlockingSystem.js';
 
 export class SceneManager {
     constructor() {
@@ -21,6 +23,12 @@ export class SceneManager {
         this.objects = [];
         this.fish = [];
         this.predators = [];
+        
+        // Flocking system
+        this.flockingSystem = new FlockingSystem();
+        
+        // Bait (goal) object
+        this.bait = null;
     }
 
     init = async (shaderManager) => {
@@ -156,6 +164,121 @@ export class SceneManager {
         namePlaceholder.position.set(0, -50, 0);
         this.scene.add(namePlaceholder);
     }
+    
+    /**
+     * Spawn a school of fish
+     */
+    spawnFishSchool = (count = 50) => {
+        const fishGeometry = new THREE.ConeGeometry(0.15, -0.5, 8);
+        fishGeometry.rotateX(Math.PI * 0.5); // Point forward
+        
+        const fishMaterial = new THREE.MeshStandardMaterial({
+            color: 0x4a90e2,
+            roughness: 0.6,
+            metalness: 0.4,
+            emissive: 0x1a3a5a,
+            emissiveIntensity: 0.2
+        });
+        
+        for (let i = 0; i < count; i++) {
+            // Create fish entity
+            const fish = new Fish();
+            
+            // Random spawn position (in a cluster)
+            fish.position.set(
+                -5 + Math.random() * 10,
+                2 + Math.random() * 3,
+                -5 + Math.random() * 10
+            );
+            
+            // Random initial velocity
+            fish.velocity.set(
+                -0.5 + Math.random(),
+                -0.2 + Math.random() * 0.4,
+                -0.5 + Math.random()
+            );
+            
+            // Create mesh
+            const mesh = new THREE.Mesh(fishGeometry, fishMaterial.clone());
+            mesh.castShadow = true;
+            fish.setMesh(mesh);
+            this.scene.add(mesh);
+            
+            // Add to flocking system
+            this.flockingSystem.addFish(fish);
+            this.fish.push(fish);
+        }
+        
+        console.log(`✓ Spawned ${count} fish`);
+    }
+    
+    /**
+     * Create bait (goal) object
+     */
+    createBait = (position = new THREE.Vector3(10, 3, 10)) => {
+        const baitGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+        const baitMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.5,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+        
+        this.bait = new THREE.Mesh(baitGeometry, baitMaterial);
+        this.bait.position.copy(position);
+        this.scene.add(this.bait);
+        
+        // Set bait position in flocking system
+        this.flockingSystem.setBaitPosition(position);
+        
+        console.log('✓ Created bait at', position);
+    }
+    
+    /**
+     * Add obstacle for fish to avoid
+     */
+    addObstacle = (position, radius = 1.0) => {
+        const obstacle = {
+            position: position.clone(),
+            boundingRadius: radius
+        };
+        
+        // Add to flocking system
+        this.flockingSystem.addObstacle(obstacle);
+        
+        // Create visual representation - Bright red emissive spheres
+        const obstacleGeometry = new THREE.SphereGeometry(radius, 32, 32);
+        const obstacleMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff0000,        // Bright red
+            emissive: 0xff0000,     // Red glow
+            emissiveIntensity: 0.5,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+        
+        const obstacleMesh = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+        obstacleMesh.position.copy(position);
+        obstacleMesh.castShadow = true;
+        obstacleMesh.receiveShadow = true;
+        this.scene.add(obstacleMesh);
+        
+        // Add wireframe helper for extra visibility
+        const wireframeGeometry = new THREE.SphereGeometry(radius * 1.1, 16, 16);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffff00,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.6
+        });
+        const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+        wireframeMesh.position.copy(position);
+        this.scene.add(wireframeMesh);
+        
+        console.log(`✓ Added obstacle at (${position.x}, ${position.y}, ${position.z}) with radius ${radius}`);
+        
+        return obstacle;
+    }
 
     updateShader = (shaderManager) => {
         // This will be used to switch materials when shader changes
@@ -169,7 +292,14 @@ export class SceneManager {
             obj.rotation.y += deltaTime * (0.5 + index * 0.2);
         });
 
-        // Update fish (boids simulation) - TODO
-        // Update predators (AI) - TODO
+        // Update flocking system
+        this.flockingSystem.update(deltaTime);
+        
+        // Animate bait (pulsing effect)
+        if (this.bait) {
+            const time = Date.now() * 0.001;
+            const scale = 1.0 + Math.sin(time * 3) * 0.2;
+            this.bait.scale.setScalar(scale);
+        }
     }
 }
