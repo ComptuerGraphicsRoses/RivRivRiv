@@ -207,6 +207,13 @@ class FlockingFrenzy {
                 }
                 break;
 
+            case 't':
+                // Toggle all spotlights on/off
+                if (this.objectManager && !this.objectManager.buildMode) {
+                    this.objectManager.toggleAllSpotlights();
+                }
+                break;
+
             case 'n':
                 // Animate camera to team names scene
                 this.camera.animateToNamesScene();
