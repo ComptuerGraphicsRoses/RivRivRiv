@@ -42,7 +42,7 @@ export class SceneManager {
 
         return new Promise((resolve, reject) => {
             loader.load(
-                '../assets/models/Scene2.fbx',
+                '../assets/models/Scene.fbx',
                 (fbx) => {
                     this.scene.add(fbx);
                     console.log('✓ Scene.fbx loaded with textures');
