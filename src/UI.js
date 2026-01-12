@@ -28,7 +28,7 @@ export class UIManager {
         // Item metadata for display
         this.itemMetadata = {
             rock1: { name: 'Small Rock', icon: '🪨', keybind: '3' },
-            rock2: { name: 'Medium Rock', icon: '🗿', keybind: '4' },
+            rock2: { name: 'Spiky Rock', icon: '💀', keybind: '4' },
             rock3: { name: 'Large Rock', icon: '⛰️', keybind: '5' },
             bait: { name: 'Bait', icon: '🪝', keybind: '6' },
             spotlight: { name: 'Spotlight', icon: '💡', keybind: '7' }

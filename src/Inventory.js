@@ -146,10 +146,12 @@ export class InventoryManager {
         const status = {};
 
         for (const objectType in levelConfig) {
+            const limit = levelConfig[objectType];
+            const placed = this.placedCounts[objectType] || 0;
             status[objectType] = {
-                limit: levelConfig[objectType],
-                placed: this.placedCounts[objectType] || 0,
-                remaining: this.getRemaining(objectType)
+                limit,
+                placed,
+                remaining: Math.max(0, limit - placed)
             };
         }
 
