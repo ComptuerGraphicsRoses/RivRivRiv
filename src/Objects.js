@@ -2,6 +2,7 @@
 // src/Objects.js - add scroll-controlled preview distance
 import * as THREE from 'three';
 import { InventoryManager } from './Inventory.js';
+import { createObjectType, getObjectAttributes } from './ObjectTypes.js';
 
 export class ObjectManager {
     constructor(scene, camera, canvas) {
@@ -11,11 +12,14 @@ export class ObjectManager {
 
         this.placedObjects = [];
         this.previewObject = null;
+        this.previewSpotlight = null; // Preview spotlight light in build mode
+        this.previewSpotlightTarget = null; // Target for preview spotlight
         this.buildMode = false;
 
         this.selectedShape = 'rock1'; // 'rock1', 'rock2', 'rock3', 'bait', 'spotlight'
 
         this.collidables = [];
+        this.minDistance = 1.5; // Minimum distance between placed objects
         this._lastPreviewPos = new THREE.Vector3();
         this._previewMoveThreshold = 0.05;
 
@@ -30,9 +34,30 @@ export class ObjectManager {
         this.rotationSensitivity = 0.01;
         this.previewRotation = new THREE.Euler(0, 0, 0);
 
+        // Spotlight intensity control
+        this.spotlightIntensity = 6.0; // Default intensity
+        this.minSpotlightIntensity = 1.0;
+        this.maxSpotlightIntensity = 20.0;
+        this.intensityStep = 0.5;
+
         // Initialize inventory manager
         this.inventoryManager = new InventoryManager();
         this.inventoryManager.setLevel('level1'); // Assume level1 for now
+
+        // Initialize inventory manager
+        this.inventoryManager = new InventoryManager();
+        this.inventoryManager.setLevel('level1'); // Assume level1 for now
+
+        // Flag to prevent immediate placement after selecting an object
+        this.justSelectedObject = false;
+
+        // Raycaster for object selection when not in build mode
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.onCanvasClick = this.onCanvasClick.bind(this);
+
+        // Add global click listener for object selection
+        this.canvas.addEventListener('click', this.onCanvasClick);
 
         // Callback for inventory changes
         this.onInventoryChange = null;
@@ -46,7 +71,6 @@ export class ObjectManager {
     toggleBuildModeWithShape(shape) {
         // Check inventory before allowing build mode
         if (!this.inventoryManager.canPlace(shape)) {
-            const remaining = this.inventoryManager.getRemaining(shape);
             const limit = this.inventoryManager.getLimit(shape);
             console.log(`Cannot place ${shape}: limit reached (${limit}/${limit} used)`);
             return false;
@@ -72,6 +96,23 @@ export class ObjectManager {
         this.previewObject = new THREE.Mesh(geometry, material);
         this.scene.add(this.previewObject);
 
+        // Add preview spotlight light if placing a spotlight
+        if (this.selectedShape === 'spotlight') {
+            this.previewSpotlight = new THREE.SpotLight(0xffffff, this.spotlightIntensity);
+            this.previewSpotlight.angle = Math.PI / 9;
+            this.previewSpotlight.penumbra = 0.2;
+            this.previewSpotlight.decay = 1;
+            this.previewSpotlight.distance = 0;
+            this.previewSpotlight.castShadow = false; // Disable shadows for preview performance
+
+            // Create target for spotlight
+            this.previewSpotlightTarget = new THREE.Object3D();
+            this.previewSpotlight.target = this.previewSpotlightTarget;
+
+            this.scene.add(this.previewSpotlight);
+            this.scene.add(this.previewSpotlightTarget);
+        }
+
         this.indexCollidables();
         this.updatePreviewPosition(true);
 
@@ -89,6 +130,17 @@ export class ObjectManager {
             this.previewObject.material.dispose();
             this.previewObject = null;
         }
+
+        // Remove preview spotlight if it exists
+        if (this.previewSpotlight) {
+            this.scene.remove(this.previewSpotlight);
+            this.previewSpotlight = null;
+        }
+        if (this.previewSpotlightTarget) {
+            this.scene.remove(this.previewSpotlightTarget);
+            this.previewSpotlightTarget = null;
+        }
+
         window.removeEventListener('mousemove', this.onMouseMove);
         window.removeEventListener('click', this.onMouseClick);
         window.removeEventListener('wheel', this.onWheel);
@@ -123,65 +175,23 @@ export class ObjectManager {
     }
 
     createGeometry(shape) {
-        // Placeholder geometries - replace with actual rock models later
-        switch (shape) {
-            case 'rock1':
-                return new THREE.BoxGeometry(2, 2, 2); // Small rock
-            case 'rock2':
-                return new THREE.BoxGeometry(3, 2.5, 2.5); // Medium rock
-            case 'rock3':
-                return new THREE.BoxGeometry(4, 3, 3); // Large rock
-            case 'bait':
-                return new THREE.SphereGeometry(0.4, 16, 16); // Simple sphere for bait
-            case 'spotlight':
-                // Visual representation of spotlight - small cone pointing down
-                return new THREE.ConeGeometry(0.5, 1, 8);
-            default:
-                return new THREE.BoxGeometry(2, 2, 2);
-        }
+        const objectType = createObjectType(shape);
+        return objectType.createGeometry();
     }
 
     getPreviewColor(shape) {
-        switch (shape) {
-            case 'spotlight':
-                return 0xffff00; // Yellow for spotlight preview
-            default:
-                return 0x00ff00;
-        }
+        const objectType = createObjectType(shape);
+        return objectType.previewColor;
     }
 
     getPlacedColor(shape) {
-        switch (shape) {
-            case 'rock1':
-                return 0x8b7355; // Light brown
-            case 'rock2':
-                return 0x696969; // Gray
-            case 'rock3':
-                return 0x556b2f; // Olive green
-            case 'bait':
-                return 0xff69b4; // Pink for bait
-            case 'spotlight':
-                return 0xffaa00; // Orange for spotlight body
-            default:
-                return 0x8b7355;
-        }
+        const objectType = createObjectType(shape);
+        return objectType.color;
     }
 
     getShapeSize(shape) {
-        switch (shape) {
-            case 'rock1':
-                return 2;
-            case 'rock2':
-                return 2.5;
-            case 'rock3':
-                return 3;
-            case 'bait':
-                return 0.8;
-            case 'spotlight':
-                return 1; // Small size for spotlight
-            default:
-                return 2;
-        }
+        const objectType = createObjectType(shape);
+        return objectType.size;
     }
 
     indexCollidables() {
@@ -246,6 +256,18 @@ export class ObjectManager {
             this._lastPreviewPos.copy(position);
             const hasCollision = this.checkCollision(position);
             this.updatePreviewColor(hasCollision);
+        }
+
+        // Update preview spotlight position and target if it exists
+        if (this.previewSpotlight && this.previewSpotlightTarget) {
+            this.previewSpotlight.position.copy(position);
+            this.previewSpotlight.rotation.copy(this.previewRotation);
+
+            // Update spotlight target based on rotation
+            const direction = new THREE.Vector3(0, -1, 0);
+            direction.applyEuler(this.previewRotation);
+            const targetDistance = 10;
+            this.previewSpotlightTarget.position.copy(position).add(direction.multiplyScalar(targetDistance));
         }
     }
 
@@ -313,6 +335,9 @@ export class ObjectManager {
         }
 
     onMouseClick(event) {
+        // Ignore clicks that just selected an object
+        if (this.justSelectedObject) return;
+
         if (event.button === 0) { // Left click - place object
             if (!this.buildMode || !this.previewObject) return;
 
@@ -329,6 +354,123 @@ export class ObjectManager {
         }
     }
 
+    /**
+     * Handle canvas clicks for selecting placed objects (when not in build mode)
+     */
+    onCanvasClick(event) {
+        // Only handle selection when NOT in build mode
+        if (this.buildMode) return;
+
+        // Raycast from center of screen (0, 0 in normalized device coordinates)
+        // This selects whatever object is at the center crosshair, not where mouse clicks
+        this.mouse.x = 0;
+        this.mouse.y = 0;
+
+        // Update raycaster
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+
+        // Check for intersections with placed objects
+        const selectableObjects = this.placedObjects.filter(obj => {
+            // For spotlights, check their visual cone instead
+            if (obj.userData.type === 'spotlight') {
+                return obj.userData.visual;
+            }
+            return obj.isMesh;
+        }).map(obj => {
+            // Return visual cone for spotlights, regular object for others
+            return obj.userData.type === 'spotlight' ? obj.userData.visual : obj;
+        });
+
+        const intersects = this.raycaster.intersectObjects(selectableObjects, false);
+
+        if (intersects.length > 0) {
+            const clickedObject = intersects[0].object;
+
+            // Find the original placed object
+            let selectedObject = null;
+            let selectedIndex = -1;  // ADD THIS LINE
+            for (let i = 0; i < this.placedObjects.length; i++) {  // CHANGE: use for loop with index
+                const obj = this.placedObjects[i];
+                if (obj.isMesh && obj === clickedObject) {
+                    selectedObject = obj;
+                    selectedIndex = i;  // ADD THIS LINE
+                    break;
+                } else if (obj.userData.visual === clickedObject) {
+                    selectedObject = obj;
+                    selectedIndex = i;  // ADD THIS LINE
+                    break;
+                }
+            }
+
+            if (selectedObject && selectedObject.userData.type) {
+                const objectType = selectedObject.userData.type;
+                console.log(`Removing ${objectType} to re-place it...`);
+
+                // Prevent this click from triggering build mode placement
+                event.stopPropagation();
+                this.justSelectedObject = true;
+
+                // Remove the object from the scene first
+                this.removeObject(selectedIndex);
+
+                // Now enter build mode with this object type
+                this.toggleBuildModeWithShape(objectType);
+
+                // Reset flag after a short delay
+                setTimeout(() => {
+                    this.justSelectedObject = false;
+                }, 100);
+            }
+        }
+    }
+
+    /**
+     * Remove a placed object by index
+     * @param {number} index - Index in placedObjects array
+     */
+    removeObject(index) {
+        if (index < 0 || index >= this.placedObjects.length) return;
+
+        const obj = this.placedObjects[index];
+        const objectType = obj.userData.type;
+
+        // Remove from scene
+        this.scene.remove(obj);
+
+        // Handle spotlight cleanup
+        if (objectType === 'spotlight') {
+            if (obj.userData.visual) {
+                this.scene.remove(obj.userData.visual);
+                if (obj.userData.visual.geometry) obj.userData.visual.geometry.dispose();
+                if (obj.userData.visual.material) obj.userData.visual.material.dispose();
+            }
+            if (obj.userData.target) {
+                this.scene.remove(obj.userData.target);
+            }
+        }
+
+        // Handle regular object cleanup
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) obj.material.dispose();
+
+        // Remove from collidables
+        this.collidables = this.collidables.filter(entry => entry.mesh !== obj);
+
+        // Remove from placedObjects array
+        this.placedObjects.splice(index, 1);
+
+        // Decrement inventory count
+        if (this.inventoryManager.placedCounts[objectType]) {
+            this.inventoryManager.placedCounts[objectType]--;
+            console.log(`${objectType} removed. Count: ${this.inventoryManager.placedCounts[objectType]}/${this.inventoryManager.getLimit(objectType)}`);
+        }
+
+        // Notify inventory change
+        if (this.onInventoryChange) {
+            this.onInventoryChange();
+        }
+    }
+
     placeObject() {
         if (!this.previewObject) return;
 
@@ -338,7 +480,7 @@ export class ObjectManager {
             const spotlight = new THREE.SpotLight(0xffffff, 2.0);
             spotlight.position.copy(this.previewObject.position);
             spotlight.rotation.copy(this.previewObject.rotation);
-            spotlight.intensity = 6.0;
+            spotlight.intensity = this.spotlightIntensity;
             spotlight.angle = Math.PI / 9;
             spotlight.penumbra = 0.2;
             spotlight.decay = 1;
@@ -374,11 +516,14 @@ export class ObjectManager {
             visualCone.rotation.copy(this.previewObject.rotation);
             this.scene.add(visualCone);
 
-            // Store spotlight with metadata
+            // Store spotlight with metadata and attributes
+            const objectTypeData = createObjectType(this.selectedShape);
             spotlight.userData.type = 'spotlight';
             spotlight.userData.placedAt = Date.now();
             spotlight.userData.visual = visualCone;
             spotlight.userData.target = target;
+            spotlight.userData.attributes = objectTypeData; // Store all attributes
+            spotlight.userData.attributes.lightIntensity = this.spotlightIntensity; // Store actual used intensity
 
             this.placedObjects.push(spotlight);
 
@@ -404,8 +549,12 @@ export class ObjectManager {
             const placedObject = new THREE.Mesh(geometry, material);
             placedObject.position.copy(this.previewObject.position);
             placedObject.rotation.copy(this.previewObject.rotation);
+
+            // Store object type and attributes for easy querying
+            const objectTypeData = createObjectType(this.selectedShape);
             placedObject.userData.type = this.selectedShape;
             placedObject.userData.placedAt = Date.now();
+            placedObject.userData.attributes = objectTypeData; // Store all attributes
 
             // Enable shadows
             placedObject.castShadow = true;
@@ -441,7 +590,36 @@ export class ObjectManager {
         this.exitBuildMode();
     }
 
-    update(deltaTime) {
+    /**
+     * Get all bait object positions and metadata for fish AI
+     * @returns {Array} Array of bait objects with position, type, and detection info
+     */
+    getBaitObjects() {
+        return this.placedObjects
+            .filter(obj => obj.userData.attributes?.isAttractive === true)
+            .map(obj => {
+                const attrs = obj.userData.attributes;
+                return {
+                    position: obj.position.clone(),
+                    type: obj.userData.type,
+                    object: obj,
+                    attractionRadius: attrs.attractionRadius || 10,
+                    attractionStrength: attrs.attractionStrength || 1.5,
+                    nutritionValue: attrs.nutritionValue || 0
+                };
+            });
+    }
+
+    /**
+     * Get object attributes for collision detection (for Fish.js)
+     * @param {THREE.Object3D} object - The collided object
+     * @returns {PlaceableObject|null} Object attributes or null
+     */
+    getObjectAttributes(object) {
+        return getObjectAttributes(object);
+    }
+
+    update() {
         if (this.buildMode && this.previewObject) {
             this.updatePreviewPosition();
         }
@@ -467,6 +645,9 @@ export class ObjectManager {
 
     dispose() {
         this.exitBuildMode();
+
+        // Remove canvas click listener
+        this.canvas.removeEventListener('click', this.onCanvasClick);
 
         this.placedObjects.forEach(obj => {
             this.scene.remove(obj);

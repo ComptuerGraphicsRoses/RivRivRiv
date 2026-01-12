@@ -175,6 +175,38 @@ class FlockingFrenzy {
                 }
                 break;
 
+            case '+':
+                // Increase spotlight intensity
+                if (this.objectManager && this.objectManager.buildMode && this.objectManager.selectedShape === 'spotlight') {
+                    this.objectManager.spotlightIntensity = Math.min(
+                        this.objectManager.maxSpotlightIntensity,
+                        this.objectManager.spotlightIntensity + this.objectManager.intensityStep
+                    );
+                    // Update preview spotlight intensity in real-time
+                    if (this.objectManager.previewSpotlight) {
+                        this.objectManager.previewSpotlight.intensity = this.objectManager.spotlightIntensity;
+                    }
+                    console.log(`Spotlight intensity: ${this.objectManager.spotlightIntensity.toFixed(1)}`);
+                    event.preventDefault();
+                }
+                break;
+
+            case '-':
+                // Decrease spotlight intensity
+                if (this.objectManager && this.objectManager.buildMode && this.objectManager.selectedShape === 'spotlight') {
+                    this.objectManager.spotlightIntensity = Math.max(
+                        this.objectManager.minSpotlightIntensity,
+                        this.objectManager.spotlightIntensity - this.objectManager.intensityStep
+                    );
+                    // Update preview spotlight intensity in real-time
+                    if (this.objectManager.previewSpotlight) {
+                        this.objectManager.previewSpotlight.intensity = this.objectManager.spotlightIntensity;
+                    }
+                    console.log(`Spotlight intensity: ${this.objectManager.spotlightIntensity.toFixed(1)}`);
+                    event.preventDefault();
+                }
+                break;
+
             case 'n':
                 // Animate camera to team names scene
                 this.camera.animateToNamesScene();
@@ -203,7 +235,7 @@ class FlockingFrenzy {
 
         // Update object manager (build mode)
         if (this.objectManager) {
-            this.objectManager.update(deltaTime);
+            this.objectManager.update();
         }
 
         // Update shader uniforms
