@@ -334,9 +334,23 @@ export class ObjectManager {
             this.previewDistance
         );
 
-        // Get all intersections except preview object
+        // Get all intersections except preview object (and its children if it's an FBX group)
         const intersects = raycaster.intersectObjects(this.scene.children, true)
-            .filter(hit => hit.object !== this.previewObject);
+            .filter(hit => {
+                // Exclude the preview object itself
+                if (hit.object === this.previewObject) return false;
+
+                // For FBX models, exclude all children within the preview object
+                if (this.previewObject.userData.isFBXModel) {
+                    let parent = hit.object.parent;
+                    while (parent) {
+                        if (parent === this.previewObject) return false;
+                        parent = parent.parent;
+                    }
+                }
+
+                return true;
+            });
 
         let actualDistance = this.previewDistance;
 
