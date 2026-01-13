@@ -5,7 +5,6 @@
 
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Fish } from './Fish.js';
 import { FlockingSystem } from './FlockingSystem.js';
 
@@ -39,8 +38,8 @@ export class SceneManager {
         // Load Scene.fbx model
         await this.loadSceneModel();
 
-        // Load obstacles from ObstacleSpheres.glb
-        await this.loadObstaclesFromGLB();
+        // Load obstacles from ObstacleSpheres.fbx
+        await this.loadObstaclesFromFBX();
 
         // Create placeholder geometry for testing
         this.createTestScene();
@@ -72,36 +71,36 @@ export class SceneManager {
     }
 
     /**
-     * Load obstacles from ObstacleSpheres.glb
+     * Load obstacles from ObstacleSpheres.fbx
      * Detects all sphere objects and adds them as obstacles
      */
-    loadObstaclesFromGLB = async () => {
-        const loader = new GLTFLoader();
+    loadObstaclesFromFBX = async () => {
+        const loader = new FBXLoader();
 
-        // Configuration for importing obstacles from Blender GLB
+        // Configuration for importing obstacles from Blender FBX
         // TODO: These values should match the export settings from Blender
         const OBSTACLE_IMPORT_CONFIG = {
             // Position scale factor (1.0 = no scaling)
-            positionScale: 1.0,
+            positionScale: 0.01,
             
             // Position offset to align with Scene.fbx coordinate system
-            // Needed because ObstacleSpheres.glb and Scene.fbx may have different origins
+            // Needed because ObstacleSpheres.fbx and Scene.fbx may have different origins
             positionOffset: new THREE.Vector3(0, -1, 0),
             
             // Scale multiplier to match Blender units
             // 0.6 suggests a unit mismatch between Blender export and Three.js scene
             // Check Blender Scene Properties > Units > Unit Scale
-            scaleMultiplier: 0.6
+            scaleMultiplier: 0.01
         };
 
         return new Promise((resolve, reject) => {
             loader.load(
-                '../assets/test/ObstacleSpheres.glb',
-                (gltf) => {
+                '../assets/test/ObstacleSpheres.fbx',
+                (fbx) => {
                     let sphereCount = 0;
 
-                    // Traverse all objects in the GLTF scene
-                    gltf.scene.traverse((child) => {
+                    // Traverse all objects in the FBX
+                    fbx.traverse((child) => {
                         if (child.isMesh && child.geometry) {
                             // Check if this is a sphere by analyzing the geometry
                             const geometry = child.geometry;
@@ -145,14 +144,14 @@ export class SceneManager {
                         }
                     });
 
-                    console.log(`✓ ObstacleSpheres.glb loaded - Found ${sphereCount} sphere obstacles`);
-                    resolve(gltf);
+                    console.log(`✓ ObstacleSpheres.fbx loaded - Found ${sphereCount} sphere obstacles`);
+                    resolve(fbx);
                 },
                 (progress) => {
-                    //console.log('Loading ObstacleSpheres.glb:', (progress.loaded / progress.total * 100) + '%');
+                    //console.log('Loading ObstacleSpheres.fbx:', (progress.loaded / progress.total * 100) + '%');
                 },
                 (error) => {
-                    console.error('Error loading ObstacleSpheres.glb:', error);
+                    console.error('Error loading ObstacleSpheres.fbx:', error);
                     reject(error);
                 }
             );
