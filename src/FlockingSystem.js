@@ -9,8 +9,8 @@ export class FlockingSystem {
     constructor() {
         this.fish = [];
         this.obstacles = [];
-        this.baitPosition = new THREE.Vector3();
-        
+        this.baits = []; // Track multiple baits instead of single position
+
         // Behavior weights (tunable)
         this.separationWeight = 1.5;
         this.alignmentWeight = 1.0;
@@ -39,10 +39,40 @@ export class FlockingSystem {
     }
     
     /**
-     * Set the bait/goal position
+     * Add a bait that fish will be attracted to
+     */
+    addBait(baitObject) {
+        this.baits.push(baitObject);
+        console.log(`✓ Bait registered with flocking system at (${baitObject.position.x.toFixed(2)}, ${baitObject.position.y.toFixed(2)}, ${baitObject.position.z.toFixed(2)})`);
+    }
+
+    /**
+     * Remove a bait from tracking
+     */
+    removeBait(baitObject) {
+        const index = this.baits.indexOf(baitObject);
+        if (index > -1) {
+            this.baits.splice(index, 1);
+            console.log(`✓ Bait removed from flocking system`);
+        }
+    }
+
+    /**
+     * Clear all baits
+     */
+    clearBaits() {
+        this.baits = [];
+    }
+
+    /**
+     * Set the bait/goal position (legacy method for backward compatibility)
      */
     setBaitPosition(position) {
-        this.baitPosition.copy(position);
+        // For backward compatibility, create a simple bait object
+        const baitObject = {
+            position: position.clone()
+        };
+        this.baits = [baitObject];
     }
     
     /**
@@ -74,11 +104,16 @@ export class FlockingSystem {
             cohesionForce.multiplyScalar(this.cohesionWeight);
             totalForce.add(cohesionForce);
             
-            // 4. Seek - move towards bait/goal
-            const seekForce = this.calculateSeek(fish, this.baitPosition);
-            seekForce.multiplyScalar(this.seekWeight);
-            totalForce.add(seekForce);
-            
+            // 4. Seek - move towards nearest bait/goal
+            if (this.baits.length > 0) {
+                const nearestBait = this.findNearestBait(fish);
+                if (nearestBait) {
+                    const seekForce = this.calculateSeek(fish, nearestBait.position);
+                    seekForce.multiplyScalar(this.seekWeight);
+                    totalForce.add(seekForce);
+                }
+            }
+
             // 5. Obstacle avoidance
             const avoidanceForce = this.calculateObstacleAvoidance(fish);
             avoidanceForce.multiplyScalar(this.obstacleAvoidanceWeight);
@@ -95,8 +130,71 @@ export class FlockingSystem {
             // Fourth pass: hard collision correction (safety net)
             this._correctObstacleCollisions(fish);
         }
+
+        // Fifth pass: check for bait consumption
+        this._checkBaitConsumption();
+    }
+
+    /**
+     * Check if any fish have reached baits and consume them
+     * First fish to reach a bait consumes it
+     */
+    _checkBaitConsumption() {
+        if (this.baits.length === 0) return;
+
+        const baitsToRemove = [];
+
+        // Check each bait against all fish
+        for (const bait of this.baits) {
+            for (const fish of this.fish) {
+                if (!fish.alive) continue;
+
+                const distance = fish.position.distanceTo(bait.position);
+
+                // If fish is within consumption radius
+                if (distance <= fish.baitConsumptionRadius) {
+                    // Mark this bait for removal (first fish wins)
+                    if (!baitsToRemove.includes(bait)) {
+                        baitsToRemove.push(bait);
+                        console.log(`🐟 Fish consumed bait at (${bait.position.x.toFixed(2)}, ${bait.position.y.toFixed(2)}, ${bait.position.z.toFixed(2)})`);
+                    }
+                    break; // Only first fish consumes this bait
+                }
+            }
+        }
+
+        // Remove consumed baits
+        for (const bait of baitsToRemove) {
+            // Remove from tracking array
+            this.removeBait(bait);
+
+            // Notify callback (SceneManager/ObjectManager will handle scene removal)
+            if (this.onBaitConsumed) {
+                this.onBaitConsumed(bait);
+            }
+        }
     }
     
+    /**
+     * Find the nearest bait to a fish
+     */
+    findNearestBait(fish) {
+        if (this.baits.length === 0) return null;
+
+        let nearestBait = null;
+        let nearestDistSq = Infinity;
+
+        for (const bait of this.baits) {
+            const distSq = fish.position.distanceToSquared(bait.position);
+            if (distSq < nearestDistSq) {
+                nearestDistSq = distSq;
+                nearestBait = bait;
+            }
+        }
+
+        return nearestBait;
+    }
+
     /**
      * Update neighbor lists for all fish
      */

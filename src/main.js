@@ -15,7 +15,7 @@ class FlockingFrenzy {
     constructor() {
         // Get canvas element
         this.canvas = document.getElementById('canvas');
-        
+
         // Initialize Three.js renderer
         this.renderer = new THREE.WebGLRenderer({
             canvas: this.canvas,
@@ -73,8 +73,13 @@ class FlockingFrenzy {
             this.ui.init(this.gameState);
             console.log('✓ UI initialized');
 
-            // Initialize object manager (build mode system)
-            this.objectManager = new ObjectManager(this.sceneManager.scene, this.camera.camera, this.canvas);
+            // Initialize object manager (build mode system) with SceneManager reference
+            this.objectManager = new ObjectManager(
+                this.sceneManager.scene,
+                this.camera.camera,
+                this.canvas,
+                this.sceneManager  // Pass SceneManager for bait registration
+            );
             // Pass ObjectManager reference to camera so it can check rotation mode
             this.camera.objectManager = this.objectManager;
             console.log('✓ Object manager initialized');
@@ -87,6 +92,19 @@ class FlockingFrenzy {
                 this.ui.updateInventory();
             };
             console.log('✓ Inventory UI initialized');
+
+            // Set up bait consumption callback
+            this.sceneManager.flockingSystem.onBaitConsumed = (baitObject) => {
+                // Check if this bait was created by ObjectManager or SceneManager
+                if (baitObject.userData.createdBy === 'SceneManager') {
+                    // SceneManager bait - handle removal in SceneManager
+                    this.sceneManager.consumeBait(baitObject);
+                } else {
+                    // ObjectManager bait - handle removal in ObjectManager
+                    this.objectManager.consumeBait(baitObject);
+                }
+            };
+            console.log('✓ Bait consumption system initialized');
 
             // Start render loop
             this.animate();
@@ -225,6 +243,7 @@ class FlockingFrenzy {
     }
     
     update(deltaTime) {
+
         // Update camera
         this.camera.update(deltaTime);
         

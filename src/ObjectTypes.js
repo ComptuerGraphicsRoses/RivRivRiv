@@ -27,10 +27,7 @@ export class PlaceableObject {
      * @returns {THREE.BufferGeometry}
      */
     createGeometry() {
-        const geometry = new THREE.BoxGeometry(this.size, this.size, this.size);
-        geometry.computeBoundingBox();
-        geometry.computeBoundingSphere();
-        return geometry;
+        return new THREE.BoxGeometry(this.size, this.size, this.size);
     }
 }
 
@@ -50,10 +47,7 @@ export class Rock1 extends PlaceableObject {
     }
 
     createGeometry() {
-        const geometry = new THREE.BoxGeometry(2, 2, 2);
-        geometry.computeBoundingBox();
-        geometry.computeBoundingSphere();
-        return geometry;
+        return new THREE.BoxGeometry(2, 2, 2);
     }
 }
 
@@ -74,10 +68,7 @@ export class Rock2 extends PlaceableObject {
     }
 
     createGeometry() {
-        const geometry = new THREE.BoxGeometry(3, 2.5, 2.5);
-        geometry.computeBoundingBox();
-        geometry.computeBoundingSphere();
-        return geometry;
+        return new THREE.BoxGeometry(3, 2.5, 2.5);
     }
 }
 
@@ -97,10 +88,7 @@ export class Rock3 extends PlaceableObject {
     }
 
     createGeometry() {
-        const geometry = new THREE.BoxGeometry(4, 3, 3);
-        geometry.computeBoundingBox();
-        geometry.computeBoundingSphere();
-        return geometry;
+        return new THREE.BoxGeometry(4, 3, 3);
     }
 }
 
@@ -116,17 +104,15 @@ export class Bait extends PlaceableObject {
         this.previewColor = 0x00ff00;
 
         // Bait attributes - ATTRACTIVE!
-        // this.isAttractive = true;
-        // this.attractionRadius = 10;
-        // this.attractionStrength = 1.5;
-        // this.nutritionValue = 50;
+        this.isAttractive = true;
+        this.attractionRadius = 10;
+        this.attractionStrength = 1.5;
+        this.nutritionValue = 50;
+        this.isConsumable = true;  // Can be consumed by fish
     }
 
     createGeometry() {
-        const geometry = new THREE.SphereGeometry(0.4, 16, 16);
-        geometry.computeBoundingBox();
-        geometry.computeBoundingSphere();
-        return geometry;
+        return new THREE.SphereGeometry(0.4, 16, 16);
     }
 }
 
@@ -150,10 +136,7 @@ export class Spotlight extends PlaceableObject {
     }
 
     createGeometry() {
-        const geometry = new THREE.ConeGeometry(0.5, 1, 8);
-        geometry.computeBoundingBox();
-        geometry.computeBoundingSphere();
-        return geometry;
+        return new THREE.ConeGeometry(0.5, 1, 8);
     }
 }
 

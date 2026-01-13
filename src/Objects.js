@@ -5,10 +5,11 @@ import { InventoryManager } from './Inventory.js';
 import { createObjectType, getObjectAttributes } from './ObjectTypes.js';
 
 export class ObjectManager {
-    constructor(scene, camera, canvas) {
+    constructor(scene, camera, canvas, sceneManager = null) {
         this.scene = scene;
         this.camera = camera;
         this.canvas = canvas;
+        this.sceneManager = sceneManager; // Reference to SceneManager for bait registration
 
         this.placedObjects = [];
         this.previewObject = null;
@@ -434,6 +435,11 @@ export class ObjectManager {
         const obj = this.placedObjects[index];
         const objectType = obj.userData.type;
 
+        // Unregister bait from flocking system if it's a bait
+        if (objectType === 'bait' && this.sceneManager) {
+            this.sceneManager.unregisterBait(obj);
+        }
+
         // Remove from scene
         this.scene.remove(obj);
 
@@ -459,16 +465,50 @@ export class ObjectManager {
         // Remove from placedObjects array
         this.placedObjects.splice(index, 1);
 
-        // Decrement inventory count
-        if (this.inventoryManager.placedCounts[objectType]) {
-            this.inventoryManager.placedCounts[objectType]--;
-            console.log(`${objectType} removed. Count: ${this.inventoryManager.placedCounts[objectType]}/${this.inventoryManager.getLimit(objectType)}`);
-        }
+        // Return to inventory
+        this.inventoryManager.recordRemoval(objectType);
 
         // Notify inventory change
         if (this.onInventoryChange) {
             this.onInventoryChange();
         }
+
+        console.log(`Removed ${objectType}`);
+    }
+
+    /**
+     * Handle bait consumption by fish
+     * Called when a fish reaches and consumes a bait
+     * @param {THREE.Mesh} baitObject - The bait object to remove
+     */
+    consumeBait(baitObject) {
+        const index = this.placedObjects.indexOf(baitObject);
+        if (index === -1) return;
+
+        const objectType = baitObject.userData.type;
+
+        // Remove from scene
+        this.scene.remove(baitObject);
+
+        // Handle cleanup
+        if (baitObject.geometry) baitObject.geometry.dispose();
+        if (baitObject.material) baitObject.material.dispose();
+
+        // Remove from collidables
+        this.collidables = this.collidables.filter(entry => entry.mesh !== baitObject);
+
+        // Remove from placedObjects array
+        this.placedObjects.splice(index, 1);
+
+        // Return to inventory
+        this.inventoryManager.recordRemoval(objectType);
+
+        // Notify inventory change
+        if (this.onInventoryChange) {
+            this.onInventoryChange();
+        }
+
+        console.log(`✓ Bait consumed by fish and returned to inventory`);
     }
 
     placeObject() {
@@ -504,11 +544,8 @@ export class ObjectManager {
             this.scene.add(spotlight.target);
 
             // Create a visual indicator (cone mesh) - non-collidable
-            const visualConeGeometry = new THREE.ConeGeometry(0.5, 1.5, 8);
-            visualConeGeometry.computeBoundingBox();
-            visualConeGeometry.computeBoundingSphere();
             const visualCone = new THREE.Mesh(
-                visualConeGeometry,
+                new THREE.ConeGeometry(0.5, 1.5, 8),
                 new THREE.MeshBasicMaterial({
                     color: 0xffaa00,
                     transparent: true,
@@ -563,6 +600,8 @@ export class ObjectManager {
             placedObject.castShadow = true;
             placedObject.receiveShadow = true;
 
+            placedObject.geometry.computeBoundingBox();
+            placedObject.geometry.computeBoundingSphere();
 
             const worldBBox = placedObject.geometry.boundingBox.clone().applyMatrix4(placedObject.matrixWorld);
 
@@ -575,6 +614,11 @@ export class ObjectManager {
             // Notify inventory change
             if (this.onInventoryChange) {
                 this.onInventoryChange();
+            }
+
+            // Register bait with flocking system if it's a bait
+            if (this.selectedShape === 'bait' && this.sceneManager) {
+                this.sceneManager.registerBait(placedObject);
             }
 
             this.collidables.push({
@@ -647,6 +691,11 @@ export class ObjectManager {
         this.canvas.removeEventListener('click', this.onCanvasClick);
 
         this.placedObjects.forEach(obj => {
+            // Unregister bait from flocking system if it's a bait
+            if (obj.userData.type === 'bait' && this.sceneManager) {
+                this.sceneManager.unregisterBait(obj);
+            }
+
             this.scene.remove(obj);
 
             // Handle spotlight cleanup

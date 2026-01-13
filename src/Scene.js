@@ -500,10 +500,45 @@ export class SceneManager {
         this.bait.position.copy(position);
         this.scene.add(this.bait);
 
-        // Set bait position in flocking system
-        this.flockingSystem.setBaitPosition(position);
+        // Register with flocking system
+        this.flockingSystem.addBait(this.bait);
 
         console.log('✓ Created bait at', position);
+    }
+
+    /**
+     * Register a bait object placed by ObjectManager
+     * This allows fish to chase baits placed in build mode
+     */
+    registerBait = (baitObject) => {
+        this.flockingSystem.addBait(baitObject);
+    }
+
+    /**
+     * Unregister a bait object (e.g., when removed)
+     */
+    unregisterBait = (baitObject) => {
+        this.flockingSystem.removeBait(baitObject);
+    }
+
+    /**
+     * Handle bait consumption - remove bait from scene
+     * Called by FlockingSystem when fish consume bait
+     */
+    consumeBait = (baitObject) => {
+        // Remove from scene
+        this.scene.remove(baitObject);
+
+        // Clean up geometry and material
+        if (baitObject.geometry) baitObject.geometry.dispose();
+        if (baitObject.material) baitObject.material.dispose();
+
+        // If this was the default bait, clear reference
+        if (baitObject === this.bait) {
+            this.bait = null;
+        }
+
+        console.log('✓ Bait consumed by fish!');
     }
 
     /**

@@ -29,6 +29,9 @@ export class Fish {
         this.alive = true;
         this.reachedGoal = false;
         
+        // Bait consumption
+        this.baitConsumptionRadius = 0.6;  // How close to bait to consume it
+
         // Rendering
         this.mesh = null;
         
