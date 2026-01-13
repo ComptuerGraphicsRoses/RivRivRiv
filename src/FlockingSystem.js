@@ -296,11 +296,29 @@ export class FlockingSystem {
             const inDetectionRange = distanceAlongPath < detectionBoxLength;
             
             if (isAhead && inDetectionRange) {
-                const expandedRadius = obstacle.boundingRadius + fish.boundingRadius;
-                const lateralDistance = this._calculateLateralDistance(obstacleLocalPos);
+                // Transform to ellipsoid space for accurate collision detection
+                // In ellipsoid space, the obstacle becomes a unit sphere
+                const invScale = new THREE.Vector3(
+                    1.0 / obstacle.scale.x,
+                    1.0 / obstacle.scale.y,
+                    1.0 / obstacle.scale.z
+                );
                 
-                // Check if obstacle intersects with our detection box width
-                if (lateralDistance < expandedRadius && distanceAlongPath < closestDistance) {
+                // Transform obstacle position to ellipsoid space
+                const obstacleInEllipsoidSpace = obstacleLocalPos.clone().multiply(invScale);
+                
+                // Fish bounding radius in ellipsoid space (use max inverse scale for conservative detection)
+                const maxInvScale = Math.max(invScale.x, invScale.y, invScale.z);
+                const fishRadiusInEllipsoidSpace = fish.boundingRadius * maxInvScale;
+                
+                // Expanded radius in ellipsoid space
+                const expandedRadius = obstacle.boundingRadius + fishRadiusInEllipsoidSpace;
+                
+                // Lateral distance in ellipsoid space (XY plane in fish's local coordinates)
+                const lateralDistanceInEllipsoidSpace = this._calculateLateralDistance(obstacleInEllipsoidSpace);
+                
+                // Check if obstacle intersects with our detection box width (in ellipsoid space)
+                if (lateralDistanceInEllipsoidSpace < expandedRadius && distanceAlongPath < closestDistance) {
                     closestDistance = distanceAlongPath;
                     closestObstacle = obstacle;
                     closestLocalPos.copy(obstacleLocalPos);
