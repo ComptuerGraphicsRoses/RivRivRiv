@@ -222,7 +222,7 @@ export class FlockingSystem {
         if (this.obstacles.length === 0) return force;
         
         // Detection box length is proportional to speed
-        const dBoxLength = this.detectionBoxMinLength + 
+        const detectionBoxLength = this.detectionBoxMinLength + 
             (fish.getSpeed() / fish.maxSpeed) * this.detectionBoxMinLength;
         
         let closestObstacle = null;
@@ -237,29 +237,25 @@ export class FlockingSystem {
         // Check all obstacles in fish's local space
         for (const obstacle of this.obstacles) {
             // Transform obstacle position to fish's local space
-            const localPos = obstacle.position.clone().applyMatrix4(inverseMatrix);
+            const obstacleLocalPos = obstacle.position.clone().applyMatrix4(inverseMatrix);
             
             // In fish's local space:
-            // +Z = forward, +X = right, +Y = up
-            // We want obstacles AHEAD of the fish (negative Z in local space because lookAt flips it)
-            // Actually in Three.js with our forward = (0,0,1), local -Z is ahead
-            
             // Check if obstacle is ahead (negative Z) and within detection range
-            if (localPos.z < 0 && Math.abs(localPos.z) < dBoxLength) {
+            if (obstacleLocalPos.z < 0 && Math.abs(obstacleLocalPos.z) < detectionBoxLength) {
                 const expandedRadius = obstacle.boundingRadius + fish.boundingRadius;
                 
                 // Check if obstacle is within the width of detection box
                 // Using horizontal distance (x and y in local space)
-                const lateralDistance = Math.sqrt(localPos.x * localPos.x + localPos.y * localPos.y);
+                const lateralDistance = Math.sqrt(obstacleLocalPos.x * obstacleLocalPos.x + obstacleLocalPos.y * obstacleLocalPos.y);
                 
                 if (lateralDistance < expandedRadius) {
                     // This obstacle is in our path!
-                    const distToObstacle = Math.abs(localPos.z);
+                    const distToObstacle = Math.abs(obstacleLocalPos.z);
                     
                     if (distToObstacle < closestDistance) {
                         closestDistance = distToObstacle;
                         closestObstacle = obstacle;
-                        closestLocalPos.copy(localPos);
+                        closestLocalPos.copy(obstacleLocalPos);
                     }
                 }
             }
@@ -268,7 +264,7 @@ export class FlockingSystem {
         // If we found a close obstacle, calculate avoidance force
         if (closestObstacle !== null) {
             // The closer the obstacle, the stronger the steering force
-            const multiplier = 1.0 + ((dBoxLength - closestDistance) / dBoxLength);
+            const multiplier = 1.0 + ((detectionBoxLength - closestDistance) / detectionBoxLength);
             
             // Calculate lateral force (steer to the side)
             // Push away from obstacle in X and Y (lateral directions)
