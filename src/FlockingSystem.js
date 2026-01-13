@@ -404,37 +404,62 @@ export class FlockingSystem {
         if (!fish.alive) return;
         
         for (const obstacle of this.obstacles) {
-            const toObstacle = new THREE.Vector3().subVectors(obstacle.position, fish.position);
-            const distance = toObstacle.length();
-            const minDistance = obstacle.boundingRadius + fish.boundingRadius;
+            // Transform fish position into ellipsoid's local space
+            // In this space, the ellipsoid becomes a unit sphere
+            const fishPosRelative = new THREE.Vector3().subVectors(fish.position, obstacle.position);
+            
+            // Scale by inverse of ellipsoid scale to convert to unit sphere space
+            const invScale = new THREE.Vector3(
+                1.0 / obstacle.scale.x,
+                1.0 / obstacle.scale.y,
+                1.0 / obstacle.scale.z
+            );
+            const fishInEllipsoidSpace = fishPosRelative.clone().multiply(invScale);
+            
+            // Distance in transformed space (as if obstacle is a unit sphere)
+            const distanceInEllipsoidSpace = fishInEllipsoidSpace.length();
+            
+            // Fish bounding radius also needs to be scaled to ellipsoid space
+            // Use the maximum inverse scale component for conservative collision detection
+            const maxInvScale = Math.max(invScale.x, invScale.y, invScale.z);
+            const fishRadiusInEllipsoidSpace = fish.boundingRadius * maxInvScale;
+            
+            // Minimum distance in ellipsoid space (obstacle is now radius=boundingRadius sphere)
+            const minDistance = obstacle.boundingRadius + fishRadiusInEllipsoidSpace;
             
             // Check if fish is inside obstacle's boundary
-            if (distance < minDistance) {
-                // Calculate penetration depth
-                const penetrationDepth = minDistance - distance;
+            if (distanceInEllipsoidSpace < minDistance) {
+                // Calculate penetration depth in ellipsoid space
+                const penetrationDepth = minDistance - distanceInEllipsoidSpace;
                 
-                // Instead of teleporting, apply a strong repulsion force
-                let pushDirection;
-                if (distance > 0.001) {
-                    // Normal case: push away from center
-                    pushDirection = toObstacle.clone().normalize().negate();
+                // Calculate push direction in ellipsoid space
+                let pushDirectionEllipsoidSpace;
+                if (distanceInEllipsoidSpace > 0.001) {
+                    // Normal case: push away from center in ellipsoid space
+                    pushDirectionEllipsoidSpace = fishInEllipsoidSpace.clone().normalize();
                 } else {
                     // Edge case: fish exactly at obstacle center, push in random direction
-                    pushDirection = new THREE.Vector3(
+                    pushDirectionEllipsoidSpace = new THREE.Vector3(
                         Math.random() - 0.5,
                         Math.random() - 0.5,
                         Math.random() - 0.5
                     ).normalize();
                 }
                 
+                // Transform push direction back to world space
+                // The gradient of the ellipsoid surface points in the direction of (x/a², y/b², z/c²)
+                // This is equivalent to multiplying by inverse scale squared, then normalizing
+                const pushDirectionWorldSpace = pushDirectionEllipsoidSpace.clone().multiply(invScale).normalize();
+                
                 // Apply smooth repulsion via velocity instead of position jump
                 // Strength based on penetration depth - deeper = stronger push
                 const repulsionStrength = (penetrationDepth + 0.2) * 8.0; // Strong but smooth
-                const repulsionVelocity = pushDirection.multiplyScalar(repulsionStrength);
+                const repulsionVelocity = pushDirectionWorldSpace.multiplyScalar(repulsionStrength);
                 fish.velocity.add(repulsionVelocity);
                 
-                // Dampen any velocity toward the obstacle
-                const toObstacleNorm = toObstacle.clone().normalize();
+                // Dampen any velocity toward the obstacle (in world space)
+                const toObstacle = new THREE.Vector3().subVectors(obstacle.position, fish.position);
+                const toObstacleNorm = toObstacle.normalize();
                 const velocityTowardObstacle = fish.velocity.dot(toObstacleNorm);
                 if (velocityTowardObstacle > 0) {
                     // Remove the component moving toward obstacle
