@@ -130,6 +130,23 @@ export class InventoryManager {
     }
 
     /**
+     * Record that an object has been removed (returns to inventory)
+     * @param {string} objectType - Type of object removed
+     */
+    recordRemoval(objectType) {
+        if (!this.placedCounts[objectType]) {
+            this.placedCounts[objectType] = 0;
+        }
+
+        if (this.placedCounts[objectType] > 0) {
+            this.placedCounts[objectType]--;
+            console.log(`Removed ${objectType}: ${this.placedCounts[objectType]}/${this.getLimit(objectType)}`);
+        } else {
+            console.warn(`Attempted to remove ${objectType} but count was already 0`);
+        }
+    }
+
+    /**
      * Get current placement counts
      * @returns {object} - Current counts
      */
