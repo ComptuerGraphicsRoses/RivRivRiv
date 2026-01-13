@@ -7,6 +7,7 @@ export class GameState {
     constructor() {
         // Game phases
         this.phase = 'PREPARATION'; // PREPARATION, SIMULATION, EVALUATION
+        this.paused = false;
         
         // Scoring
         this.score = 100;
@@ -24,6 +25,10 @@ export class GameState {
         
         // Level configuration
         this.requiredSurvivalPercentage = 0.6; // 60%
+    }
+
+    togglePause = () => {
+        this.paused = !this.paused;
     }
     
     startSimulation = () => {

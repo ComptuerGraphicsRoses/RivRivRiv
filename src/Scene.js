@@ -169,8 +169,8 @@ export class SceneManager {
      * Spawn a school of fish
      */
     spawnFishSchool = (count = 50) => {
-        const fishGeometry = new THREE.ConeGeometry(0.15, -0.5, 8);
-        fishGeometry.rotateX(Math.PI * 0.5); // Point forward
+        const fishGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
+        fishGeometry.rotateX(Math.PI * -0.5); // Point forward
         
         const fishMaterial = new THREE.MeshStandardMaterial({
             color: 0x4a90e2,
@@ -238,33 +238,18 @@ export class SceneManager {
     /**
      * Add obstacle for fish to avoid
      */
-    addObstacle = (position, radius = 1.0) => {
+    addObstacle = (position, radius = 1.0, scale = new THREE.Vector3(1, 1, 1)) => {
         const obstacle = {
             position: position.clone(),
-            boundingRadius: radius
+            boundingRadius: radius,
+            scale: scale.clone()
         };
         
         // Add to flocking system
         this.flockingSystem.addObstacle(obstacle);
         
-        // Create visual representation - Bright red emissive spheres
-        const obstacleGeometry = new THREE.SphereGeometry(radius, 32, 32);
-        const obstacleMaterial = new THREE.MeshStandardMaterial({
-            color: 0xff0000,        // Bright red
-            emissive: 0xff0000,     // Red glow
-            emissiveIntensity: 0.5,
-            roughness: 0.3,
-            metalness: 0.7
-        });
-        
-        const obstacleMesh = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-        obstacleMesh.position.copy(position);
-        obstacleMesh.castShadow = true;
-        obstacleMesh.receiveShadow = true;
-        this.scene.add(obstacleMesh);
-        
         // Add wireframe helper for extra visibility
-        const wireframeGeometry = new THREE.SphereGeometry(radius * 1.1, 16, 16);
+        const wireframeGeometry = new THREE.SphereGeometry(radius, 16, 16);
         const wireframeMaterial = new THREE.MeshBasicMaterial({
             color: 0xffff00,
             wireframe: true,
@@ -273,6 +258,7 @@ export class SceneManager {
         });
         const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
         wireframeMesh.position.copy(position);
+        wireframeMesh.scale.copy(scale);
         this.scene.add(wireframeMesh);
         
         console.log(`✓ Added obstacle at (${position.x}, ${position.y}, ${position.z}) with radius ${radius}`);
