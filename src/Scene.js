@@ -75,28 +75,32 @@ export class SceneManager {
     }
 
     /**
-     * Load kaya1 rock mesh for visual display
+     * Generic function to load an FBX mesh
+     * @param {string} filePath - Path to the FBX file
+     * @param {THREE.Vector3} position - Position in world space
+     * @param {THREE.Vector3} scale - Scale factors (default 0.01 for all axes)
+     * @param {THREE.Euler} rotation - Rotation in radians (default no rotation)
+     * @returns {Promise<THREE.Group>} The loaded FBX object
      */
-    loadRockMesh = async () => {
+    loadFBXMesh = async (filePath, position, scale = new THREE.Vector3(0.01, 0.01, 0.01), rotation = new THREE.Euler(0, 0, 0)) => {
         const loader = new FBXLoader();
-        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
 
         return new Promise((resolve, reject) => {
             loader.load(
-                '../assets/models/kaya1.fbx',
+                filePath,
                 (fbx) => {
-                    // Apply scale to match boundary spheres (0.01 scale)
-                    fbx.scale.set(0.01, 0.01, 0.01);
-                    fbx.position.copy(ROCK_POSITION);
+                    fbx.scale.copy(scale);
+                    fbx.position.copy(position);
+                    fbx.rotation.copy(rotation);
                     this.scene.add(fbx);
-                    console.log(`✓ kaya1.fbx loaded at (${ROCK_POSITION.x}, ${ROCK_POSITION.y}, ${ROCK_POSITION.z}) with scale 0.01`);
+                    console.log(`✓ FBX mesh loaded: ${filePath} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
                     resolve(fbx);
                 },
                 (progress) => {
-                    //console.log('Loading kaya1.fbx:', (progress.loaded / progress.total * 100) + '%');
+                    //console.log(`Loading ${filePath}:`, (progress.loaded / progress.total * 100) + '%');
                 },
                 (error) => {
-                    console.error('Error loading kaya1.fbx:', error);
+                    console.error(`Error loading ${filePath}:`, error);
                     reject(error);
                 }
             );
@@ -104,24 +108,33 @@ export class SceneManager {
     }
 
     /**
-     * Load kaya1 boundary spheres as obstacles
+     * Generic function to load FBX boundary spheres as obstacles
+     * @param {string} filePath - Path to the FBX boundary file
+     * @param {THREE.Vector3} position - Position offset in world space
+     * @param {THREE.Vector3} scale - Scale factors (default 0.01 for all axes)
+     * @param {THREE.Euler} rotation - Rotation in radians (default no rotation)
+     * @returns {Promise<THREE.Group>} The loaded FBX object
      */
-    loadRockBoundaries = async () => {
+    loadFBXBoundaries = async (filePath, position, scale = new THREE.Vector3(0.01, 0.01, 0.01), rotation = new THREE.Euler(0, 0, 0)) => {
         const loader = new FBXLoader();
-        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
 
         return new Promise((resolve, reject) => {
             loader.load(
-                '../assets/models/kaya1Boundaries.fbx',
+                filePath,
                 (fbx) => {
                     let sphereCount = 0;
 
-                    // Configuration for rock boundaries
+                    // Configuration for boundaries
                     const BOUNDARY_CONFIG = {
-                        positionScale: 0.01,
-                        positionOffset: ROCK_POSITION, // Apply rock position offset
-                        scaleMultiplier: 0.01
+                        positionScale: scale.x, // Use X component as uniform scale
+                        positionOffset: position,
+                        scaleMultiplier: scale.x
                     };
+
+                    // Apply rotation to the entire FBX group if needed
+                    if (rotation.x !== 0 || rotation.y !== 0 || rotation.z !== 0) {
+                        fbx.rotation.copy(rotation);
+                    }
 
                     // Traverse all objects in the FBX
                     fbx.traverse((child) => {
@@ -157,23 +170,53 @@ export class SceneManager {
                                 this.addObstacle(worldPosition, radius, worldScale, worldQuaternion);
 
                                 sphereCount++;
-                                console.log(`✓ Added rock boundary: ${child.name} at (${worldPosition.x.toFixed(2)}, ${worldPosition.y.toFixed(2)}, ${worldPosition.z.toFixed(2)})`);
+                                console.log(`✓ Added boundary: ${child.name} at (${worldPosition.x.toFixed(2)}, ${worldPosition.y.toFixed(2)}, ${worldPosition.z.toFixed(2)})`);
                             }
                         }
                     });
 
-                    console.log(`✓ kaya1Boundaries.fbx loaded - Found ${sphereCount} boundary spheres`);
+                    console.log(`✓ FBX boundaries loaded: ${filePath} - Found ${sphereCount} sphere obstacles`);
                     resolve(fbx);
                 },
                 (progress) => {
-                    //console.log('Loading kaya1Boundaries.fbx:', (progress.loaded / progress.total * 100) + '%');
+                    //console.log(`Loading ${filePath}:`, (progress.loaded / progress.total * 100) + '%');
                 },
                 (error) => {
-                    console.error('Error loading kaya1Boundaries.fbx:', error);
+                    console.error(`Error loading ${filePath}:`, error);
                     reject(error);
                 }
             );
         });
+    }
+
+    /**
+     * Load kaya1 rock mesh for visual display
+     * (Wrapper function using generic loadFBXMesh)
+     */
+    loadRockMesh = async () => {
+        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
+        const ROCK_SCALE = new THREE.Vector3(0.01, 0.01, 0.01);
+        
+        return this.loadFBXMesh(
+            '../assets/models/kaya1.fbx',
+            ROCK_POSITION,
+            ROCK_SCALE
+        );
+    }
+
+    /**
+     * Load kaya1 boundary spheres as obstacles
+     * (Wrapper function using generic loadFBXBoundaries)
+     */
+    loadRockBoundaries = async () => {
+        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
+        const ROCK_SCALE = new THREE.Vector3(0.01, 0.01, 0.01);
+        
+        return this.loadFBXBoundaries(
+            '../assets/models/kaya1Boundaries.fbx',
+            ROCK_POSITION,
+            ROCK_SCALE
+        );
     }
 
     /**
