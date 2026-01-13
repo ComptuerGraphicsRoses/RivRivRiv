@@ -38,6 +38,10 @@ export class SceneManager {
         // Load Scene.fbx model
         await this.loadSceneModel();
 
+        // Load rock mesh and boundaries
+        await this.loadRockMesh();
+        await this.loadRockBoundaries();
+
         // Load obstacles from ObstacleSpheres.fbx
         await this.loadObstaclesFromFBX();
 
@@ -64,6 +68,108 @@ export class SceneManager {
                 },
                 (error) => {
                     console.error('Error loading Scene.fbx:', error);
+                    reject(error);
+                }
+            );
+        });
+    }
+
+    /**
+     * Load kaya1 rock mesh for visual display
+     */
+    loadRockMesh = async () => {
+        const loader = new FBXLoader();
+        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
+
+        return new Promise((resolve, reject) => {
+            loader.load(
+                '../assets/models/kaya1.fbx',
+                (fbx) => {
+                    // Apply scale to match boundary spheres (0.01 scale)
+                    fbx.scale.set(0.01, 0.01, 0.01);
+                    fbx.position.copy(ROCK_POSITION);
+                    this.scene.add(fbx);
+                    console.log(`✓ kaya1.fbx loaded at (${ROCK_POSITION.x}, ${ROCK_POSITION.y}, ${ROCK_POSITION.z}) with scale 0.01`);
+                    resolve(fbx);
+                },
+                (progress) => {
+                    //console.log('Loading kaya1.fbx:', (progress.loaded / progress.total * 100) + '%');
+                },
+                (error) => {
+                    console.error('Error loading kaya1.fbx:', error);
+                    reject(error);
+                }
+            );
+        });
+    }
+
+    /**
+     * Load kaya1 boundary spheres as obstacles
+     */
+    loadRockBoundaries = async () => {
+        const loader = new FBXLoader();
+        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
+
+        return new Promise((resolve, reject) => {
+            loader.load(
+                '../assets/models/kaya1Boundaries.fbx',
+                (fbx) => {
+                    let sphereCount = 0;
+
+                    // Configuration for rock boundaries
+                    const BOUNDARY_CONFIG = {
+                        positionScale: 0.01,
+                        positionOffset: ROCK_POSITION, // Apply rock position offset
+                        scaleMultiplier: 0.01
+                    };
+
+                    // Traverse all objects in the FBX
+                    fbx.traverse((child) => {
+                        if (child.isMesh && child.geometry) {
+                            const geometry = child.geometry;
+
+                            // Get world position and scale
+                            child.updateWorldMatrix(true, false);
+                            const worldPosition = new THREE.Vector3();
+                            const worldScale = new THREE.Vector3();
+                            const worldQuaternion = new THREE.Quaternion();
+                            child.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
+
+                            // Apply scale and position offset
+                            worldPosition.multiplyScalar(BOUNDARY_CONFIG.positionScale);
+                            worldPosition.add(BOUNDARY_CONFIG.positionOffset);
+                            worldScale.multiplyScalar(BOUNDARY_CONFIG.scaleMultiplier);
+
+                            // Calculate bounding sphere
+                            if (!geometry.boundingSphere) {
+                                geometry.computeBoundingSphere();
+                            }
+
+                            const boundingSphere = geometry.boundingSphere;
+
+                            // Check if this is a sphere
+                            const isSphere = child.name.toLowerCase().includes('sphere') ||
+                                child.name.toLowerCase().includes('ball') ||
+                                this.isSphereGeometry(geometry);
+
+                            if (isSphere) {
+                                const radius = boundingSphere.radius;
+                                this.addObstacle(worldPosition, radius, worldScale, worldQuaternion);
+
+                                sphereCount++;
+                                console.log(`✓ Added rock boundary: ${child.name} at (${worldPosition.x.toFixed(2)}, ${worldPosition.y.toFixed(2)}, ${worldPosition.z.toFixed(2)})`);
+                            }
+                        }
+                    });
+
+                    console.log(`✓ kaya1Boundaries.fbx loaded - Found ${sphereCount} boundary spheres`);
+                    resolve(fbx);
+                },
+                (progress) => {
+                    //console.log('Loading kaya1Boundaries.fbx:', (progress.loaded / progress.total * 100) + '%');
+                },
+                (error) => {
+                    console.error('Error loading kaya1Boundaries.fbx:', error);
                     reject(error);
                 }
             );
