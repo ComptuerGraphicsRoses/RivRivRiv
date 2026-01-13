@@ -5,7 +5,6 @@
 
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Fish } from './Fish.js';
 import { FlockingSystem } from './FlockingSystem.js';
 
@@ -39,8 +38,12 @@ export class SceneManager {
         // Load Scene.fbx model
         await this.loadSceneModel();
 
-        // Load obstacles from ObstacleSpheres.glb
-        await this.loadObstaclesFromGLB();
+        // Load rock mesh and boundaries
+        await this.loadRockMesh();
+        await this.loadRockBoundaries();
+
+        // Load obstacles from ObstacleSpheres.fbx
+        await this.loadObstaclesFromFBX();
 
         // Create placeholder geometry for testing
         this.createTestScene();
@@ -72,36 +75,181 @@ export class SceneManager {
     }
 
     /**
-     * Load obstacles from ObstacleSpheres.glb
+     * Generic function to load an FBX mesh
+     * @param {string} filePath - Path to the FBX file
+     * @param {THREE.Vector3} position - Position in world space
+     * @param {THREE.Vector3} scale - Scale factors (default 0.01 for all axes)
+     * @param {THREE.Euler} rotation - Rotation in radians (default no rotation)
+     * @returns {Promise<THREE.Group>} The loaded FBX object
+     */
+    loadFBXMesh = async (filePath, position, scale = new THREE.Vector3(0.01, 0.01, 0.01), rotation = new THREE.Euler(0, 0, 0)) => {
+        const loader = new FBXLoader();
+
+        return new Promise((resolve, reject) => {
+            loader.load(
+                filePath,
+                (fbx) => {
+                    fbx.scale.copy(scale);
+                    fbx.position.copy(position);
+                    fbx.rotation.copy(rotation);
+                    this.scene.add(fbx);
+                    console.log(`✓ FBX mesh loaded: ${filePath} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+                    resolve(fbx);
+                },
+                (progress) => {
+                    //console.log(`Loading ${filePath}:`, (progress.loaded / progress.total * 100) + '%');
+                },
+                (error) => {
+                    console.error(`Error loading ${filePath}:`, error);
+                    reject(error);
+                }
+            );
+        });
+    }
+
+    /**
+     * Generic function to load FBX boundary spheres as obstacles
+     * @param {string} filePath - Path to the FBX boundary file
+     * @param {THREE.Vector3} position - Position offset in world space
+     * @param {THREE.Vector3} scale - Scale factors (default 0.01 for all axes)
+     * @param {THREE.Euler} rotation - Rotation in radians (default no rotation)
+     * @returns {Promise<THREE.Group>} The loaded FBX object
+     */
+    loadFBXBoundaries = async (filePath, position, scale = new THREE.Vector3(0.01, 0.01, 0.01), rotation = new THREE.Euler(0, 0, 0)) => {
+        const loader = new FBXLoader();
+
+        return new Promise((resolve, reject) => {
+            loader.load(
+                filePath,
+                (fbx) => {
+                    let sphereCount = 0;
+
+                    // Configuration for boundaries
+                    const BOUNDARY_CONFIG = {
+                        positionScale: scale.x, // Use X component as uniform scale
+                        positionOffset: position,
+                        scaleMultiplier: scale.x
+                    };
+
+                    // Apply rotation to the entire FBX group if needed
+                    if (rotation.x !== 0 || rotation.y !== 0 || rotation.z !== 0) {
+                        fbx.rotation.copy(rotation);
+                    }
+
+                    // Traverse all objects in the FBX
+                    fbx.traverse((child) => {
+                        if (child.isMesh && child.geometry) {
+                            const geometry = child.geometry;
+
+                            // Get world position and scale
+                            child.updateWorldMatrix(true, false);
+                            const worldPosition = new THREE.Vector3();
+                            const worldScale = new THREE.Vector3();
+                            const worldQuaternion = new THREE.Quaternion();
+                            child.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
+
+                            // Apply scale and position offset
+                            worldPosition.multiplyScalar(BOUNDARY_CONFIG.positionScale);
+                            worldPosition.add(BOUNDARY_CONFIG.positionOffset);
+                            worldScale.multiplyScalar(BOUNDARY_CONFIG.scaleMultiplier);
+
+                            // Calculate bounding sphere
+                            if (!geometry.boundingSphere) {
+                                geometry.computeBoundingSphere();
+                            }
+
+                            const boundingSphere = geometry.boundingSphere;
+
+                            // Check if this is a sphere
+                            const isSphere = child.name.toLowerCase().includes('sphere') ||
+                                child.name.toLowerCase().includes('ball') ||
+                                this.isSphereGeometry(geometry);
+
+                            if (isSphere) {
+                                const radius = boundingSphere.radius;
+                                this.addObstacle(worldPosition, radius, worldScale, worldQuaternion);
+
+                                sphereCount++;
+                                console.log(`✓ Added boundary: ${child.name} at (${worldPosition.x.toFixed(2)}, ${worldPosition.y.toFixed(2)}, ${worldPosition.z.toFixed(2)})`);
+                            }
+                        }
+                    });
+
+                    console.log(`✓ FBX boundaries loaded: ${filePath} - Found ${sphereCount} sphere obstacles`);
+                    resolve(fbx);
+                },
+                (progress) => {
+                    //console.log(`Loading ${filePath}:`, (progress.loaded / progress.total * 100) + '%');
+                },
+                (error) => {
+                    console.error(`Error loading ${filePath}:`, error);
+                    reject(error);
+                }
+            );
+        });
+    }
+
+    /**
+     * Load kaya1 rock mesh for visual display
+     * (Wrapper function using generic loadFBXMesh)
+     */
+    loadRockMesh = async () => {
+        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
+        const ROCK_SCALE = new THREE.Vector3(0.01, 0.01, 0.01);
+        
+        return this.loadFBXMesh(
+            '../assets/models/kaya1.fbx',
+            ROCK_POSITION,
+            ROCK_SCALE
+        );
+    }
+
+    /**
+     * Load kaya1 boundary spheres as obstacles
+     * (Wrapper function using generic loadFBXBoundaries)
+     */
+    loadRockBoundaries = async () => {
+        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
+        const ROCK_SCALE = new THREE.Vector3(0.01, 0.01, 0.01);
+        
+        return this.loadFBXBoundaries(
+            '../assets/models/kaya1Boundaries.fbx',
+            ROCK_POSITION,
+            ROCK_SCALE
+        );
+    }
+
+    /**
+     * Load obstacles from ObstacleSpheres.fbx
      * Detects all sphere objects and adds them as obstacles
      */
-    loadObstaclesFromGLB = async () => {
-        const loader = new GLTFLoader();
+    loadObstaclesFromFBX = async () => {
+        const loader = new FBXLoader();
 
-        // Configuration for importing obstacles from Blender GLB
+        // Configuration for importing obstacles from Blender FBX
         // TODO: These values should match the export settings from Blender
         const OBSTACLE_IMPORT_CONFIG = {
             // Position scale factor (1.0 = no scaling)
-            positionScale: 1.0,
+            positionScale: 0.01,
             
             // Position offset to align with Scene.fbx coordinate system
-            // Needed because ObstacleSpheres.glb and Scene.fbx may have different origins
+            // Needed because ObstacleSpheres.fbx and Scene.fbx may have different origins
             positionOffset: new THREE.Vector3(0, -1, 0),
             
             // Scale multiplier to match Blender units
             // 0.6 suggests a unit mismatch between Blender export and Three.js scene
             // Check Blender Scene Properties > Units > Unit Scale
-            scaleMultiplier: 0.6
+            scaleMultiplier: 0.01
         };
 
         return new Promise((resolve, reject) => {
             loader.load(
-                '../assets/test/ObstacleSpheres.glb',
-                (gltf) => {
+                '../assets/test/ObstacleSpheres.fbx',
+                (fbx) => {
                     let sphereCount = 0;
 
-                    // Traverse all objects in the GLTF scene
-                    gltf.scene.traverse((child) => {
+                    // Traverse all objects in the FBX
+                    fbx.traverse((child) => {
                         if (child.isMesh && child.geometry) {
                             // Check if this is a sphere by analyzing the geometry
                             const geometry = child.geometry;
@@ -145,14 +293,14 @@ export class SceneManager {
                         }
                     });
 
-                    console.log(`✓ ObstacleSpheres.glb loaded - Found ${sphereCount} sphere obstacles`);
-                    resolve(gltf);
+                    console.log(`✓ ObstacleSpheres.fbx loaded - Found ${sphereCount} sphere obstacles`);
+                    resolve(fbx);
                 },
                 (progress) => {
-                    //console.log('Loading ObstacleSpheres.glb:', (progress.loaded / progress.total * 100) + '%');
+                    //console.log('Loading ObstacleSpheres.fbx:', (progress.loaded / progress.total * 100) + '%');
                 },
                 (error) => {
-                    console.error('Error loading ObstacleSpheres.glb:', error);
+                    console.error('Error loading ObstacleSpheres.fbx:', error);
                     reject(error);
                 }
             );
