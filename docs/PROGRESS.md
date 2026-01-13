@@ -70,10 +70,16 @@
   - [x] Rock - Static obstacle (fish avoid)
     - [ ] Taşın rengi yok
   - [ ] SpikedRock - Lethal obstacle (fish die on contact)
-    - [ ] 3d model eksik
+    - [ ] 3d model eksik (Dursun veya Sinan)
+    - [ ] 3d boundry model eksik (Dursun veya Sinan)
+    - [ ] Balık ölme kodlanmalı
+  - [ ] Huge Rock - Devasa olan işte şittirmeyn beni
+    - [ ] 3d model eksik (Dursun veya Sinan)
+    - [ ] 3d boundry model eksik (Dursun veya Sinan)
     - [ ] Balık ölme kodlanmalı
   - [x] Bait - Attraction point (goal seeking)
     - [ ] 10 balık değince yok olsun tek balık değil (opsiyonel)
+    - [ ] Yem bittiğinde final noktasına gitmeleri gerek (yenilemeyen bait veya direk final noktası gibi bi şey koyalım)
   - [x] (Spotlight already exists for lighting)
 
 - [x] **Spotlight UI controls** - Must meet BBM 412 requirements
