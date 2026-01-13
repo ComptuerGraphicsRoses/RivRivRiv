@@ -45,9 +45,6 @@ export class SceneManager {
         // Load obstacles from ObstacleSpheres.fbx
         await this.loadObstaclesFromFBX();
 
-        // Create placeholder geometry for testing
-        this.createTestScene();
-
         // Create team names scene (in separate area)
         this.createTeamNamesScene();
     }
@@ -362,66 +359,6 @@ export class SceneManager {
         this.lights.spotlight.target.position.set(0, 0, 0);
         this.scene.add(this.lights.spotlight);
         this.scene.add(this.lights.spotlight.target);
-
-        // Helper for spotlight (for debugging)
-        const spotLightHelper = new THREE.SpotLightHelper(this.lights.spotlight);
-        this.scene.add(spotLightHelper);
-    }
-
-    createTestScene = () => {
-        // Ground plane
-        // const groundGeometry = new THREE.PlaneGeometry(50, 50);
-        // const groundMaterial = new THREE.MeshStandardMaterial({
-        //     color: 0x2a4858,
-        //     roughness: 0.8,
-        //     metalness: 0.2
-        // });
-        // const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        // ground.rotation.x = -Math.PI / 2;
-        // ground.receiveShadow = true;
-        // this.scene.add(ground);
-
-        // Test cube (Morphology #1 for BBM 412)
-        const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
-        const cubeMaterial = new THREE.MeshStandardMaterial({
-            color: 0xff6b6b,
-            roughness: 0.5,
-            metalness: 0.3
-        });
-        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube.position.set(0, 1, 0);
-        cube.castShadow = true;
-        cube.receiveShadow = true;
-        this.scene.add(cube);
-        this.objects.push(cube);
-
-        // Test sphere (Morphology #2 for BBM 412)
-        const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
-        const sphereMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4ecdc4,
-            roughness: 0.3,
-            metalness: 0.7
-        });
-        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-        sphere.position.set(4, 1, 0);
-        sphere.castShadow = true;
-        sphere.receiveShadow = true;
-        this.scene.add(sphere);
-        this.objects.push(sphere);
-
-        // Test cone (Morphology #3 for BBM 412)
-        const coneGeometry = new THREE.ConeGeometry(1, 2, 32);
-        const coneMaterial = new THREE.MeshStandardMaterial({
-            color: 0xf9ca24,
-            roughness: 0.4,
-            metalness: 0.5
-        });
-        const cone = new THREE.Mesh(coneGeometry, coneMaterial);
-        cone.position.set(-4, 1, 0);
-        cone.castShadow = true;
-        cone.receiveShadow = true;
-        this.scene.add(cone);
-        this.objects.push(cone);
     }
 
     createTeamNamesScene = () => {
