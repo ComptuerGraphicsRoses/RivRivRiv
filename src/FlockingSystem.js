@@ -328,42 +328,39 @@ export class FlockingSystem {
         const force = new THREE.Vector3();
         const { obstacle, localPosition, distance } = obstacleData;
         
-        // Check if we're in panic zone (very close to obstacle)
-        const inPanicZone = distance < this.panicDistance;
+        // Smooth proximity multiplier using quadratic easing
+        // Instead of linear or exponential, use a smooth curve that gradually increases
+        const normalizedDist = distance / detectionBoxLength; // 0 to 1 (1 = far, 0 = very close)
         
-        // Exponential proximity multiplier - gets MUCH stronger when very close
-        let proximityMultiplier;
-        if (inPanicZone) {
-            // Exponential increase when dangerously close
-            const normalizedDist = distance / this.panicDistance;
-            proximityMultiplier = 10.0 / (normalizedDist + 0.01); // Approaches infinity as distance → 0
-        } else {
-            // Linear increase in normal range
-            proximityMultiplier = 1.0 + (detectionBoxLength - distance) / detectionBoxLength;
-        }
+        // Quadratic ease-in: gentle far away, strong up close
+        // (1 - x)^2 scaled up, gives smooth acceleration as distance decreases
+        const easingFactor = 1.0 - normalizedDist; // Invert: 0 = far, 1 = close
+        const proximityMultiplier = 1.0 + (easingFactor * easingFactor * 8.0); // 1.0 to 9.0 smoothly
+        
+        // Extra boost when very close, but still smooth
+        const veryCloseBoost = distance < this.panicDistance 
+            ? (1.0 - (distance / this.panicDistance)) * 3.0  // Smooth 0-3x bonus
+            : 0;
+        
+        const finalMultiplier = proximityMultiplier + veryCloseBoost;
         
         // Calculate lateral steering force
         const lateralDistance = this._calculateLateralDistance(localPosition);
         
         if (lateralDistance > 0.001) {
             // Steer away from obstacle's lateral position
-            force.x = (obstacle.boundingRadius - localPosition.x) * proximityMultiplier;
-            force.y = (obstacle.boundingRadius - localPosition.y) * proximityMultiplier * 0.5;
+            force.x = (obstacle.boundingRadius - localPosition.x) * finalMultiplier;
+            force.y = (obstacle.boundingRadius - localPosition.y) * finalMultiplier * 0.5;
         } else {
             // Obstacle is directly ahead - randomly pick a side to avoid
             const randomDirection = Math.random() > 0.5 ? 1 : -1;
-            force.x = obstacle.boundingRadius * proximityMultiplier * randomDirection;
+            force.x = obstacle.boundingRadius * finalMultiplier * randomDirection;
         }
         
-        // Emergency braking when in panic zone
-        if (inPanicZone) {
-            // Much stronger braking to prevent penetration
-            force.z = (obstacle.boundingRadius - distance) * this.brakingWeight * 5.0;
-        } else {
-            // Normal braking force
-            const brakingForce = (obstacle.boundingRadius - distance) * this.brakingWeight;
-            force.z = brakingForce;
-        }
+        // Smooth braking curve - stronger when closer
+        const brakingMultiplier = 1.0 + (easingFactor * easingFactor * 2.0); // Gradual increase
+        const brakingForce = (obstacle.boundingRadius - distance) * this.brakingWeight * brakingMultiplier;
+        force.z = brakingForce;
         
         return force;
     }
@@ -391,9 +388,9 @@ export class FlockingSystem {
     }
     
     /**
-     * Hard collision correction - Final safety net
-     * If a fish somehow ended up inside an obstacle, forcefully push it out
-     * This should rarely trigger if avoidance is working well, but prevents exploits
+     * Smooth collision correction - Final safety net
+     * If a fish somehow ended up inside an obstacle, smoothly push it out
+     * Uses velocity-based push instead of position teleport for natural movement
      */
     _correctObstacleCollisions(fish) {
         if (!fish.alive) return;
@@ -408,33 +405,33 @@ export class FlockingSystem {
                 // Calculate penetration depth
                 const penetrationDepth = minDistance - distance;
                 
-                // Push fish out along the direction away from obstacle center
+                // Instead of teleporting, apply a strong repulsion force
+                let pushDirection;
                 if (distance > 0.001) {
                     // Normal case: push away from center
-                    const pushDirection = toObstacle.clone().normalize().negate();
-                    const correction = pushDirection.multiplyScalar(penetrationDepth + 0.1); // +0.1 for safety margin
-                    fish.position.add(correction);
+                    pushDirection = toObstacle.clone().normalize().negate();
                 } else {
                     // Edge case: fish exactly at obstacle center, push in random direction
-                    const randomDir = new THREE.Vector3(
+                    pushDirection = new THREE.Vector3(
                         Math.random() - 0.5,
                         Math.random() - 0.5,
                         Math.random() - 0.5
                     ).normalize();
-                    fish.position.add(randomDir.multiplyScalar(minDistance + 0.1));
                 }
                 
-                // Zero out velocity component toward obstacle to prevent re-entry
-                const velocityTowardObstacle = fish.velocity.dot(toObstacle) / distance;
+                // Apply smooth repulsion via velocity instead of position jump
+                // Strength based on penetration depth - deeper = stronger push
+                const repulsionStrength = (penetrationDepth + 0.2) * 8.0; // Strong but smooth
+                const repulsionVelocity = pushDirection.multiplyScalar(repulsionStrength);
+                fish.velocity.add(repulsionVelocity);
+                
+                // Dampen any velocity toward the obstacle
+                const toObstacleNorm = toObstacle.clone().normalize();
+                const velocityTowardObstacle = fish.velocity.dot(toObstacleNorm);
                 if (velocityTowardObstacle > 0) {
-                    const toObstacleNorm = toObstacle.clone().normalize();
+                    // Remove the component moving toward obstacle
                     const velocityCorrection = toObstacleNorm.multiplyScalar(velocityTowardObstacle);
                     fish.velocity.sub(velocityCorrection);
-                }
-                
-                // Sync mesh position after correction
-                if (fish.mesh) {
-                    fish.mesh.position.copy(fish.position);
                 }
             }
         }

@@ -90,15 +90,21 @@ export class Fish {
     
     /**
      * Make the fish look at a target position
+     * Uses smooth interpolation for natural turning
      */
     lookAt(target) {
         const direction = new THREE.Vector3().subVectors(target, this.position).normalize();
         
         if (direction.lengthSq() > 0.00001) {
-            // Calculate rotation to face the direction
+            // Calculate target rotation
             const matrix = new THREE.Matrix4();
             matrix.lookAt(this.position, target, this.up);
-            this.rotation.setFromRotationMatrix(matrix);
+            const targetRotation = new THREE.Quaternion();
+            targetRotation.setFromRotationMatrix(matrix);
+            
+            // Smoothly interpolate between current and target rotation
+            // 0.5 = 50% blend, creates smooth turning
+            this.rotation.slerp(targetRotation, 0.1);
         }
     }
     
