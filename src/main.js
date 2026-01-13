@@ -109,7 +109,9 @@ class FlockingFrenzy {
                 // Toggle help menu
                 this.ui.toggleHelp();
                 break;
-                
+            case 'p':
+                this.gameState.togglePause();
+                break;
             case '1':
                 // Switch to Phong shader
                 this.shaderManager.setActiveShader('phong');
@@ -135,11 +137,14 @@ class FlockingFrenzy {
     }
     
     update(deltaTime) {
+        
         // Update camera
         this.camera.update(deltaTime);
         
         // Update scene (fish, predators, etc.)
-        this.sceneManager.update(deltaTime);
+        if (!this.gameState.paused) {
+            this.sceneManager.update(deltaTime);
+        }
         
         // Update game state
         this.gameState.update(deltaTime);

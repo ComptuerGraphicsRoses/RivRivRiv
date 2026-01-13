@@ -169,8 +169,8 @@ export class SceneManager {
      * Spawn a school of fish
      */
     spawnFishSchool = (count = 50) => {
-        const fishGeometry = new THREE.ConeGeometry(0.15, -0.5, 8);
-        fishGeometry.rotateX(Math.PI * 0.5); // Point forward
+        const fishGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
+        fishGeometry.rotateX(Math.PI * -0.5); // Point forward
         
         const fishMaterial = new THREE.MeshStandardMaterial({
             color: 0x4a90e2,
