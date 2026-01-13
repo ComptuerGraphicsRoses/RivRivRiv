@@ -238,10 +238,11 @@ export class SceneManager {
     /**
      * Add obstacle for fish to avoid
      */
-    addObstacle = (position, radius = 1.0) => {
+    addObstacle = (position, radius = 1.0, scale = new THREE.Vector3(1, 1, 1)) => {
         const obstacle = {
             position: position.clone(),
-            boundingRadius: radius
+            boundingRadius: radius,
+            scale: scale.clone()
         };
         
         // Add to flocking system
@@ -257,6 +258,7 @@ export class SceneManager {
         });
         const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
         wireframeMesh.position.copy(position);
+        wireframeMesh.scale.copy(scale);
         this.scene.add(wireframeMesh);
         
         console.log(`✓ Added obstacle at (${position.x}, ${position.y}, ${position.z}) with radius ${radius}`);

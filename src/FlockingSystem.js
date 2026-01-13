@@ -241,6 +241,14 @@ export class FlockingSystem {
             );
             
             this._transformForceToWorldSpace(avoidanceForce, fish.rotation);
+            const sphereToEllipsoidTransformation = new THREE.Matrix4().makeScale(
+                closestObstacleData.obstacle.scale.x,
+                closestObstacleData.obstacle.scale.y,
+                closestObstacleData.obstacle.scale.z
+            );
+            
+            avoidanceForce.applyMatrix4(sphereToEllipsoidTransformation);
+            
             return avoidanceForce;
         }
         
