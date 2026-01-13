@@ -19,8 +19,9 @@ export class FlockingSystem {
         this.obstacleAvoidanceWeight = 5.0;  // Balanced weight
         
         // Obstacle avoidance parameters
-        this.detectionBoxMinLength = 4.0;
-        this.brakingWeight = 0.2;
+        this.detectionBoxMinLength = 5.0;  // Increased for earlier detection
+        this.brakingWeight = 0.5;          // Increased for stronger braking
+        this.panicDistance = 0.5;          // Distance at which to apply emergency measures
     }
     
     /**
@@ -90,6 +91,9 @@ export class FlockingSystem {
         // Third pass: update positions
         for (const fish of this.fish) {
             fish.update(delta);
+            
+            // Fourth pass: hard collision correction (safety net)
+            this._correctObstacleCollisions(fish);
         }
     }
     
@@ -324,8 +328,19 @@ export class FlockingSystem {
         const force = new THREE.Vector3();
         const { obstacle, localPosition, distance } = obstacleData;
         
-        // Closer obstacles produce stronger forces
-        const proximityMultiplier = 1.0 + (detectionBoxLength - distance) / detectionBoxLength;
+        // Check if we're in panic zone (very close to obstacle)
+        const inPanicZone = distance < this.panicDistance;
+        
+        // Exponential proximity multiplier - gets MUCH stronger when very close
+        let proximityMultiplier;
+        if (inPanicZone) {
+            // Exponential increase when dangerously close
+            const normalizedDist = distance / this.panicDistance;
+            proximityMultiplier = 10.0 / (normalizedDist + 0.01); // Approaches infinity as distance → 0
+        } else {
+            // Linear increase in normal range
+            proximityMultiplier = 1.0 + (detectionBoxLength - distance) / detectionBoxLength;
+        }
         
         // Calculate lateral steering force
         const lateralDistance = this._calculateLateralDistance(localPosition);
@@ -340,9 +355,15 @@ export class FlockingSystem {
             force.x = obstacle.boundingRadius * proximityMultiplier * randomDirection;
         }
         
-        // Apply braking force based on how close the obstacle is
-        const brakingForce = (obstacle.boundingRadius - distance) * this.brakingWeight;
-        force.z = brakingForce;
+        // Emergency braking when in panic zone
+        if (inPanicZone) {
+            // Much stronger braking to prevent penetration
+            force.z = (obstacle.boundingRadius - distance) * this.brakingWeight * 5.0;
+        } else {
+            // Normal braking force
+            const brakingForce = (obstacle.boundingRadius - distance) * this.brakingWeight;
+            force.z = brakingForce;
+        }
         
         return force;
     }
@@ -367,5 +388,55 @@ export class FlockingSystem {
      */
     getFishAtGoalCount() {
         return this.fish.filter(f => f.reachedGoal).length;
+    }
+    
+    /**
+     * Hard collision correction - Final safety net
+     * If a fish somehow ended up inside an obstacle, forcefully push it out
+     * This should rarely trigger if avoidance is working well, but prevents exploits
+     */
+    _correctObstacleCollisions(fish) {
+        if (!fish.alive) return;
+        
+        for (const obstacle of this.obstacles) {
+            const toObstacle = new THREE.Vector3().subVectors(obstacle.position, fish.position);
+            const distance = toObstacle.length();
+            const minDistance = obstacle.boundingRadius + fish.boundingRadius;
+            
+            // Check if fish is inside obstacle's boundary
+            if (distance < minDistance) {
+                // Calculate penetration depth
+                const penetrationDepth = minDistance - distance;
+                
+                // Push fish out along the direction away from obstacle center
+                if (distance > 0.001) {
+                    // Normal case: push away from center
+                    const pushDirection = toObstacle.clone().normalize().negate();
+                    const correction = pushDirection.multiplyScalar(penetrationDepth + 0.1); // +0.1 for safety margin
+                    fish.position.add(correction);
+                } else {
+                    // Edge case: fish exactly at obstacle center, push in random direction
+                    const randomDir = new THREE.Vector3(
+                        Math.random() - 0.5,
+                        Math.random() - 0.5,
+                        Math.random() - 0.5
+                    ).normalize();
+                    fish.position.add(randomDir.multiplyScalar(minDistance + 0.1));
+                }
+                
+                // Zero out velocity component toward obstacle to prevent re-entry
+                const velocityTowardObstacle = fish.velocity.dot(toObstacle) / distance;
+                if (velocityTowardObstacle > 0) {
+                    const toObstacleNorm = toObstacle.clone().normalize();
+                    const velocityCorrection = toObstacleNorm.multiplyScalar(velocityTowardObstacle);
+                    fish.velocity.sub(velocityCorrection);
+                }
+                
+                // Sync mesh position after correction
+                if (fish.mesh) {
+                    fish.mesh.position.copy(fish.position);
+                }
+            }
+        }
     }
 }
