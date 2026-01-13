@@ -32,7 +32,7 @@ export class PlaceableObject {
 }
 
 /**
- * Rock1 - Small rock obstacle
+ * Rock1 - Small rock obstacle (uses FBX model)
  */
 export class Rock1 extends PlaceableObject {
     constructor() {
@@ -44,9 +44,16 @@ export class Rock1 extends PlaceableObject {
 
         // Rock1 attributes
         this.isObstacle = true;
+
+        // FBX model configuration
+        this.usesFBXModel = true;
+        this.fbxMeshPath = '../assets/models/kaya2.fbx';
+        this.fbxBoundariesPath = '../assets/models/kaya2Boundaries.fbx';
+        this.fbxScale = new THREE.Vector3(0.01, 0.01, 0.01);
     }
 
     createGeometry() {
+        // Fallback geometry for preview placeholder
         return new THREE.BoxGeometry(2, 2, 2);
     }
 }
@@ -152,7 +159,9 @@ export function createObjectType(shape) {
         case 'rock3': return new Rock3();
         case 'bait': return new Bait();
         case 'spotlight': return new Spotlight();
-        default: return new PlaceableObject();
+        default:
+            console.warn(`Unknown object type "${shape}", using default PlaceableObject`);
+            return new PlaceableObject();
     }
 }
 

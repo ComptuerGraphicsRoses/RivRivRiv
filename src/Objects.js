@@ -1,6 +1,7 @@
 // javascript
 // src/Objects.js - add scroll-controlled preview distance
 import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { InventoryManager } from './Inventory.js';
 import { createObjectType, getObjectAttributes } from './ObjectTypes.js';
 
@@ -70,6 +71,12 @@ export class ObjectManager {
     }
 
     toggleBuildModeWithShape(shape) {
+        // Validate shape parameter
+        if (!shape) {
+            console.error('toggleBuildModeWithShape called with invalid shape:', shape);
+            return false;
+        }
+
         // Check inventory before allowing build mode
         if (!this.inventoryManager.canPlace(shape)) {
             const limit = this.inventoryManager.getLimit(shape);
@@ -87,15 +94,84 @@ export class ObjectManager {
         return this.buildMode;
     }
 
-    enterBuildMode() {
-        const geometry = this.createGeometry(this.selectedShape);
-        const material = new THREE.MeshStandardMaterial({
+    /**
+     * Load FBX model for build mode preview
+     * @param {PlaceableObject} objectType - Object type with FBX configuration
+     */
+    loadFBXPreview(objectType) {
+        const loader = new FBXLoader();
+
+        // Create placeholder box while loading
+        const placeholderGeometry = this.createGeometry(this.selectedShape);
+        const placeholderMaterial = new THREE.MeshStandardMaterial({
             color: this.getPreviewColor(this.selectedShape),
             transparent: true,
-            opacity: 0.5
+            opacity: 0.3
         });
-        this.previewObject = new THREE.Mesh(geometry, material);
+        this.previewObject = new THREE.Mesh(placeholderGeometry, placeholderMaterial);
         this.scene.add(this.previewObject);
+
+        console.log(`Loading FBX preview: ${objectType.fbxMeshPath}`);
+
+        // Load FBX model
+        loader.load(
+            objectType.fbxMeshPath,
+            (fbx) => {
+                // Remove placeholder
+                if (this.previewObject && this.previewObject.geometry) {
+                    this.scene.remove(this.previewObject);
+                    this.previewObject.geometry.dispose();
+                    this.previewObject.material.dispose();
+                }
+
+                // Setup FBX as preview object
+                fbx.scale.copy(objectType.fbxScale);
+
+                // Make it semi-transparent for preview
+                fbx.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: this.getPreviewColor(this.selectedShape),
+                            transparent: true,
+                            opacity: 0.5
+                        });
+                    }
+                });
+
+                this.previewObject = fbx;
+                this.previewObject.userData.isFBXModel = true;
+                this.scene.add(this.previewObject);
+
+                console.log(`✓ FBX preview loaded: ${objectType.fbxMeshPath}`);
+            },
+            (progress) => {
+                // Loading progress
+            },
+            (error) => {
+                console.error(`Error loading FBX preview:`, error);
+                // Keep using placeholder on error
+            }
+        );
+    }
+
+    enterBuildMode() {
+        const objectType = createObjectType(this.selectedShape);
+
+        // Check if this object uses FBX model
+        if (objectType.usesFBXModel) {
+            // Load FBX model asynchronously
+            this.loadFBXPreview(objectType);
+        } else {
+            // Create standard geometry preview
+            const geometry = this.createGeometry(this.selectedShape);
+            const material = new THREE.MeshStandardMaterial({
+                color: this.getPreviewColor(this.selectedShape),
+                transparent: true,
+                opacity: 0.5
+            });
+            this.previewObject = new THREE.Mesh(geometry, material);
+            this.scene.add(this.previewObject);
+        }
 
         // Add preview spotlight light if placing a spotlight
         if (this.selectedShape === 'spotlight') {
@@ -127,8 +203,22 @@ export class ObjectManager {
     exitBuildMode() {
         if (this.previewObject) {
             this.scene.remove(this.previewObject);
-            this.previewObject.geometry.dispose();
-            this.previewObject.material.dispose();
+
+            // Handle FBX model cleanup
+            if (this.previewObject.userData.isFBXModel) {
+                // Dispose FBX group and all its children
+                this.previewObject.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) child.material.dispose();
+                    }
+                });
+            } else {
+                // Regular geometry cleanup
+                if (this.previewObject.geometry) this.previewObject.geometry.dispose();
+                if (this.previewObject.material) this.previewObject.material.dispose();
+            }
+
             this.previewObject = null;
         }
 
@@ -177,21 +267,37 @@ export class ObjectManager {
 
     createGeometry(shape) {
         const objectType = createObjectType(shape);
+        if (!objectType || !objectType.createGeometry) {
+            console.warn(`Invalid shape "${shape}" in createGeometry, using default box`);
+            return new THREE.BoxGeometry(2, 2, 2);
+        }
         return objectType.createGeometry();
     }
 
     getPreviewColor(shape) {
         const objectType = createObjectType(shape);
+        if (!objectType || objectType.previewColor === undefined) {
+            console.warn(`Invalid shape "${shape}" in getPreviewColor, using default`);
+            return 0x00ff00; // Default green
+        }
         return objectType.previewColor;
     }
 
     getPlacedColor(shape) {
         const objectType = createObjectType(shape);
+        if (!objectType || objectType.color === undefined) {
+            console.warn(`Invalid shape "${shape}" in getPlacedColor, using default`);
+            return 0x8b7355; // Default brown
+        }
         return objectType.color;
     }
 
     getShapeSize(shape) {
         const objectType = createObjectType(shape);
+        if (!objectType || objectType.size === undefined) {
+            console.warn(`Invalid shape "${shape}" in getShapeSize, using default size`);
+            return 2; // Default size
+        }
         return objectType.size;
     }
 
@@ -310,8 +416,26 @@ export class ObjectManager {
 
     updatePreviewColor(hasCollision) {
         if (!this.previewObject) return;
-        if (hasCollision) this.previewObject.material.color.setHex(0xff0000);
-        else this.previewObject.material.color.setHex(this.getPreviewColor(this.selectedShape));
+        if (!this.selectedShape) {
+            console.warn('updatePreviewColor called with undefined selectedShape');
+            return;
+        }
+
+        const color = hasCollision ? 0xff0000 : this.getPreviewColor(this.selectedShape);
+
+        // Handle FBX models (group objects with child meshes)
+        if (this.previewObject.userData.isFBXModel) {
+            this.previewObject.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    child.material.color.setHex(color);
+                }
+            });
+        } else {
+            // Handle regular mesh objects
+            if (this.previewObject.material && this.previewObject.material.color) {
+                this.previewObject.material.color.setHex(color);
+            }
+        }
     }
 
         onMouseMove(event) {
@@ -455,9 +579,19 @@ export class ObjectManager {
             }
         }
 
-        // Handle regular object cleanup
-        if (obj.geometry) obj.geometry.dispose();
-        if (obj.material) obj.material.dispose();
+        // Handle FBX model cleanup
+        if (obj.userData.isFBXModel) {
+            obj.traverse((child) => {
+                if (child.isMesh) {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                }
+            });
+        } else {
+            // Handle regular object cleanup
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) obj.material.dispose();
+        }
 
         // Remove from collidables
         this.collidables = this.collidables.filter(entry => entry.mesh !== obj);
@@ -509,6 +643,83 @@ export class ObjectManager {
         }
 
         console.log(`✓ Bait consumed by fish and returned to inventory`);
+    }
+
+    /**
+     * Place an FBX model object and load its boundaries
+     * @param {PlaceableObject} objectTypeData - Object type with FBX configuration
+     */
+    placeFBXObject(objectTypeData) {
+        const loader = new FBXLoader();
+        const position = this.previewObject.position.clone();
+        const rotation = this.previewObject.rotation.clone();
+        const scale = objectTypeData.fbxScale;
+
+        console.log(`Placing FBX object at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+
+        // Load FBX mesh for placement
+        loader.load(
+            objectTypeData.fbxMeshPath,
+            (fbx) => {
+                // Setup FBX as placed object
+                fbx.scale.copy(scale);
+                fbx.position.copy(position);
+                fbx.rotation.copy(rotation);
+
+                // Apply standard material to all meshes
+                fbx.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: this.getPlacedColor(this.selectedShape),
+                            metalness: 0.3,
+                            roughness: 0.7
+                        });
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
+
+                // Store object type and attributes
+                fbx.userData.type = this.selectedShape;
+                fbx.userData.placedAt = Date.now();
+                fbx.userData.attributes = objectTypeData;
+                fbx.userData.isFBXModel = true;
+
+                this.scene.add(fbx);
+                this.placedObjects.push(fbx);
+
+                // Record placement in inventory
+                this.inventoryManager.recordPlacement(this.selectedShape);
+
+                // Notify inventory change
+                if (this.onInventoryChange) {
+                    this.onInventoryChange();
+                }
+
+                console.log(`✓ Placed FBX object ${this.selectedShape} #${this.placedObjects.length}`);
+
+                // Load boundaries if available
+                if (objectTypeData.fbxBoundariesPath && this.sceneManager) {
+                    console.log(`Loading boundaries for ${this.selectedShape}...`);
+                    this.sceneManager.loadFBXBoundaries(
+                        objectTypeData.fbxBoundariesPath,
+                        position,
+                        scale,
+                        rotation
+                    ).then(() => {
+                        console.log(`✓ Boundaries loaded for ${this.selectedShape}`);
+                    }).catch((error) => {
+                        console.error(`Error loading boundaries:`, error);
+                    });
+                }
+            },
+            (progress) => {
+                // Loading progress
+            },
+            (error) => {
+                console.error(`Error placing FBX object:`, error);
+            }
+        );
     }
 
     placeObject() {
@@ -578,58 +789,65 @@ export class ObjectManager {
             console.log(`Placed spotlight #${this.placedObjects.length}`);
 
         } else {
-            // Regular object placement (rocks, etc.)
-            const geometry = this.createGeometry(this.selectedShape);
-            const material = new THREE.MeshStandardMaterial({
-                color: this.getPlacedColor(this.selectedShape),
-                metalness: 0.3,
-                roughness: 0.7
-            });
-
-            const placedObject = new THREE.Mesh(geometry, material);
-            placedObject.position.copy(this.previewObject.position);
-            placedObject.rotation.copy(this.previewObject.rotation);
-
-            // Store object type and attributes for easy querying
+            // Check if this is an FBX model or regular geometry
             const objectTypeData = createObjectType(this.selectedShape);
-            placedObject.userData.type = this.selectedShape;
-            placedObject.userData.placedAt = Date.now();
-            placedObject.userData.attributes = objectTypeData; // Store all attributes
 
-            // Enable shadows
-            placedObject.castShadow = true;
-            placedObject.receiveShadow = true;
+            if (objectTypeData.usesFBXModel && this.previewObject.userData.isFBXModel) {
+                // FBX model placement
+                this.placeFBXObject(objectTypeData);
+            } else {
+                // Regular object placement (rocks, etc.)
+                const geometry = this.createGeometry(this.selectedShape);
+                const material = new THREE.MeshStandardMaterial({
+                    color: this.getPlacedColor(this.selectedShape),
+                    metalness: 0.3,
+                    roughness: 0.7
+                });
 
-            placedObject.geometry.computeBoundingBox();
-            placedObject.geometry.computeBoundingSphere();
+                const placedObject = new THREE.Mesh(geometry, material);
+                placedObject.position.copy(this.previewObject.position);
+                placedObject.rotation.copy(this.previewObject.rotation);
 
-            const worldBBox = placedObject.geometry.boundingBox.clone().applyMatrix4(placedObject.matrixWorld);
+                // Store object type and attributes for easy querying
+                placedObject.userData.type = this.selectedShape;
+                placedObject.userData.placedAt = Date.now();
+                placedObject.userData.attributes = objectTypeData; // Store all attributes
 
-            this.scene.add(placedObject);
-            this.placedObjects.push(placedObject);
+                // Enable shadows
+                placedObject.castShadow = true;
+                placedObject.receiveShadow = true;
 
-            // Record placement in inventory
-            this.inventoryManager.recordPlacement(this.selectedShape);
+                placedObject.geometry.computeBoundingBox();
+                placedObject.geometry.computeBoundingSphere();
 
-            // Notify inventory change
-            if (this.onInventoryChange) {
-                this.onInventoryChange();
+                const worldBBox = placedObject.geometry.boundingBox.clone().applyMatrix4(placedObject.matrixWorld);
+
+                this.scene.add(placedObject);
+                this.placedObjects.push(placedObject);
+
+                // Record placement in inventory
+                this.inventoryManager.recordPlacement(this.selectedShape);
+
+                // Notify inventory change
+                if (this.onInventoryChange) {
+                    this.onInventoryChange();
+                }
+
+                // Register bait with flocking system if it's a bait
+                if (this.selectedShape === 'bait' && this.sceneManager) {
+                    this.sceneManager.registerBait(placedObject);
+                }
+
+                this.collidables.push({
+                    mesh: placedObject,
+                    localBBox: placedObject.geometry.boundingBox.clone(),
+                    localSphere: placedObject.geometry.boundingSphere.clone(),
+                    worldBBox,
+                    needsWorldBBoxUpdate: false
+                });
+
+                console.log(`Placed ${this.selectedShape} #${this.placedObjects.length}`);
             }
-
-            // Register bait with flocking system if it's a bait
-            if (this.selectedShape === 'bait' && this.sceneManager) {
-                this.sceneManager.registerBait(placedObject);
-            }
-
-            this.collidables.push({
-                mesh: placedObject,
-                localBBox: placedObject.geometry.boundingBox.clone(),
-                localSphere: placedObject.geometry.boundingSphere.clone(),
-                worldBBox,
-                needsWorldBBoxUpdate: false
-            });
-
-            console.log(`Placed ${this.selectedShape} #${this.placedObjects.length}`);
         }
 
         this.exitBuildMode();
@@ -708,9 +926,19 @@ export class ObjectManager {
                 if (obj.userData.target) this.scene.remove(obj.userData.target);
             }
 
-            // Handle regular object cleanup
-            if (obj.geometry) obj.geometry.dispose();
-            if (obj.material) obj.material.dispose();
+            // Handle FBX model cleanup
+            if (obj.userData.isFBXModel) {
+                obj.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) child.material.dispose();
+                    }
+                });
+            } else {
+                // Handle regular object cleanup
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) obj.material.dispose();
+            }
         });
         this.placedObjects = [];
         this.collidables = [];
