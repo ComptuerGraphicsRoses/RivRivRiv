@@ -247,22 +247,6 @@ export class SceneManager {
         // Add to flocking system
         this.flockingSystem.addObstacle(obstacle);
         
-        // Create visual representation - Bright red emissive spheres
-        const obstacleGeometry = new THREE.SphereGeometry(radius, 32, 32);
-        const obstacleMaterial = new THREE.MeshStandardMaterial({
-            color: 0xff0000,        // Bright red
-            emissive: 0xff0000,     // Red glow
-            emissiveIntensity: 0.5,
-            roughness: 0.3,
-            metalness: 0.7
-        });
-        
-        const obstacleMesh = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-        obstacleMesh.position.copy(position);
-        obstacleMesh.castShadow = true;
-        obstacleMesh.receiveShadow = true;
-        this.scene.add(obstacleMesh);
-        
         // Add wireframe helper for extra visibility
         const wireframeGeometry = new THREE.SphereGeometry(radius * 1.1, 16, 16);
         const wireframeMaterial = new THREE.MeshBasicMaterial({
