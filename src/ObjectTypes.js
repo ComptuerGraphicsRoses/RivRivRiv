@@ -27,7 +27,10 @@ export class PlaceableObject {
      * @returns {THREE.BufferGeometry}
      */
     createGeometry() {
-        return new THREE.BoxGeometry(this.size, this.size, this.size);
+        const geometry = new THREE.BoxGeometry(this.size, this.size, this.size);
+        geometry.computeBoundingBox();
+        geometry.computeBoundingSphere();
+        return geometry;
     }
 }
 
@@ -47,7 +50,10 @@ export class Rock1 extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.BoxGeometry(2, 2, 2);
+        const geometry = new THREE.BoxGeometry(2, 2, 2);
+        geometry.computeBoundingBox();
+        geometry.computeBoundingSphere();
+        return geometry;
     }
 }
 
@@ -68,7 +74,10 @@ export class Rock2 extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.BoxGeometry(3, 2.5, 2.5);
+        const geometry = new THREE.BoxGeometry(3, 2.5, 2.5);
+        geometry.computeBoundingBox();
+        geometry.computeBoundingSphere();
+        return geometry;
     }
 }
 
@@ -88,7 +97,10 @@ export class Rock3 extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.BoxGeometry(4, 3, 3);
+        const geometry = new THREE.BoxGeometry(4, 3, 3);
+        geometry.computeBoundingBox();
+        geometry.computeBoundingSphere();
+        return geometry;
     }
 }
 
@@ -111,7 +123,10 @@ export class Bait extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.SphereGeometry(0.4, 16, 16);
+        const geometry = new THREE.SphereGeometry(0.4, 16, 16);
+        geometry.computeBoundingBox();
+        geometry.computeBoundingSphere();
+        return geometry;
     }
 }
 
@@ -135,7 +150,10 @@ export class Spotlight extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.ConeGeometry(0.5, 1, 8);
+        const geometry = new THREE.ConeGeometry(0.5, 1, 8);
+        geometry.computeBoundingBox();
+        geometry.computeBoundingSphere();
+        return geometry;
     }
 }
 
