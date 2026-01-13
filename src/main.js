@@ -63,8 +63,7 @@ class FlockingFrenzy {
             // Spawn fish school
             this.sceneManager.spawnFishSchool(80);
 
-            // Create bait (goal)
-            this.sceneManager.createBait(new THREE.Vector3(15, 3, 0));
+            // Note: No default bait - players must place their own baits using build mode (key '6')
 
             // Add test obstacles for fish to avoid
             // this.sceneManager.addObstacle(new THREE.Vector3(5, 3, 0), 1.5, new THREE.Vector3(1, 2, 1));

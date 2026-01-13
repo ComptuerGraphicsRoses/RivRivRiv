@@ -10,7 +10,7 @@ export const LEVEL_INVENTORIES = {
         rock1: 2,      // Small rocks
         rock2: 1,      // Medium rocks
         rock3: 1,      // Large rocks
-        bait: 3,       // Bait items
+        bait: 10,       // Bait items
         spotlight: 1   // Spotlights
     },
     level2: {
