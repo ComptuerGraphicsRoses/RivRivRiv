@@ -15,14 +15,14 @@
 - [x] **No game engines** - Using Three.js library for WebGL abstraction only
 - [x] **Fully 3D scene** - Perspective projection with proper depth rendering
 - [x] **6 DOF camera** - FPS controller with WASD movement + mouse look + Space/Shift for Y-axis
-- [ ] **2+ shader programs** - Phong (realistic) + Underwater (stylized NPR)
-  - [ ] Çalışmıyor
 - [x] **Separate GLSL files** - 4 files total:
   - `shaders/phong.vert.glsl`
   - `shaders/phong.frag.glsl`
   - `shaders/underwater.vert.glsl`
   - `shaders/underwater.frag.glsl`
-- [ ] **Runtime shader switching** - Keys `1` and `2` switch between shaders
+- [ ] **2+ shader programs** - Phong (realistic) + Underwater (stylized NPR)
+  - [ ] Çalışmıyor
+  - [ ] **Runtime shader switching** - Keys `1` and `2` switch between shaders
   - [ ] Çalışmıyor
 - [x] **Help menu** - `H` key toggles detailed help overlay
 - [x] **Scoring system framework** - Point tracking with penalties implemented
@@ -47,12 +47,13 @@
 
 #### Gameplay Core - Boids System
 - [x] **Boids flocking algorithm** - Reynolds steering behaviors
-  - Separation (avoid crowding)
-  - Alignment (match neighbor heading)
-  - Cohesion (move toward group center)
-  - Goal seeking (attract to bait)
-  - Obstacle avoidance (rocks, spiked rocks)
-  - Spotlight avoidance (repulsion from light)
+  - [x] Separation (avoid crowding)
+  - [x] Alignment (match neighbor heading)
+  - [x] Cohesion (move toward group center)
+  - [x] Goal seeking (attract to bait)
+  - [x] Obstacle avoidance (rocks, spiked rocks)
+  - [ ] Balık modeli ve animasyonu eklenecek
+  - [ ] FleeBehavior ekle köpek balığından kaçsınlar
 
 - [x] **Fish school (100+ entities)** - InstancedMesh for performance
   - Fish entity class with position/velocity/acceleration
@@ -105,6 +106,11 @@
   - [ ] Real-time HUD updates
   - [ ] Final score screen
 
+- [ ] Game Loop Programlanacak
+  - [ ] Envanterdeki her şey koyulduğunda tuşa basınca simülasyon başlaması
+  - [ ] End screen
+  - [ ] Pause screen
+  - [ ] Falan filan
 ---
 
 ## Known Issues
