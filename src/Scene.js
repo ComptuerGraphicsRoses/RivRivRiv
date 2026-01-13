@@ -248,7 +248,7 @@ export class SceneManager {
         this.flockingSystem.addObstacle(obstacle);
         
         // Add wireframe helper for extra visibility
-        const wireframeGeometry = new THREE.SphereGeometry(radius * 1.1, 16, 16);
+        const wireframeGeometry = new THREE.SphereGeometry(radius, 16, 16);
         const wireframeMaterial = new THREE.MeshBasicMaterial({
             color: 0xffff00,
             wireframe: true,

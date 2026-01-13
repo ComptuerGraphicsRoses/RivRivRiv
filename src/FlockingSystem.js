@@ -221,75 +221,138 @@ export class FlockingSystem {
         
         if (this.obstacles.length === 0) return force;
         
-        // Detection box length is proportional to speed
-        const detectionBoxLength = this.detectionBoxMinLength + 
-            (fish.getSpeed() / fish.maxSpeed) * this.detectionBoxMinLength;
+        const detectionBoxLength = this._calculateDetectionBoxLength(fish);
+        const fishLocalSpaceMatrix = this._createFishLocalSpaceMatrix(fish);
+        const closestObstacleData = this._findClosestObstacleInPath(
+            fish, 
+            fishLocalSpaceMatrix, 
+            detectionBoxLength
+        );
         
+        if (closestObstacleData) {
+            const avoidanceForce = this._calculateAvoidanceForce(
+                fish,
+                closestObstacleData,
+                detectionBoxLength
+            );
+            
+            this._transformForceToWorldSpace(avoidanceForce, fish.rotation);
+            return avoidanceForce;
+        }
+        
+        return force;
+    }
+    
+    /**
+     * Calculate detection box length based on fish speed
+     * Faster fish need longer detection range
+     */
+    _calculateDetectionBoxLength(fish) {
+        const speedRatio = fish.getSpeed() / fish.maxSpeed;
+        return this.detectionBoxMinLength * (1 + speedRatio);
+    }
+    
+    /**
+     * Create inverse matrix to transform world coordinates to fish's local space
+     * In local space: fish looks down negative Z axis
+     */
+    _createFishLocalSpaceMatrix(fish) {
+        const fishWorldMatrix = new THREE.Matrix4();
+        fishWorldMatrix.compose(
+            fish.position, 
+            fish.rotation, 
+            new THREE.Vector3(1, 1, 1)
+        );
+        return new THREE.Matrix4().copy(fishWorldMatrix).invert();
+    }
+    
+    /**
+     * Find the closest obstacle that's in the fish's path
+     * Returns obstacle data with local position and distance, or null if none found
+     */
+    _findClosestObstacleInPath(fish, fishLocalSpaceMatrix, detectionBoxLength) {
         let closestObstacle = null;
         let closestDistance = Infinity;
         let closestLocalPos = new THREE.Vector3();
         
-        // Create fish's world matrix and inverse
-        const fishWorldMatrix = new THREE.Matrix4();
-        fishWorldMatrix.compose(fish.position, fish.rotation, new THREE.Vector3(1, 1, 1));
-        const inverseMatrix = new THREE.Matrix4().copy(fishWorldMatrix).invert();
-        
-        // Check all obstacles in fish's local space
         for (const obstacle of this.obstacles) {
-            // Transform obstacle position to fish's local space
-            const obstacleLocalPos = obstacle.position.clone().applyMatrix4(inverseMatrix);
+            const obstacleLocalPos = obstacle.position.clone().applyMatrix4(fishLocalSpaceMatrix);
             
-            // In fish's local space:
             // Check if obstacle is ahead (negative Z) and within detection range
-            if (obstacleLocalPos.z < 0 && Math.abs(obstacleLocalPos.z) < detectionBoxLength) {
+            const isAhead = obstacleLocalPos.z < 0;
+            const distanceAlongPath = Math.abs(obstacleLocalPos.z);
+            const inDetectionRange = distanceAlongPath < detectionBoxLength;
+            
+            if (isAhead && inDetectionRange) {
                 const expandedRadius = obstacle.boundingRadius + fish.boundingRadius;
+                const lateralDistance = this._calculateLateralDistance(obstacleLocalPos);
                 
-                // Check if obstacle is within the width of detection box
-                // Using horizontal distance (x and y in local space)
-                const lateralDistance = Math.sqrt(obstacleLocalPos.x * obstacleLocalPos.x + obstacleLocalPos.y * obstacleLocalPos.y);
-                
-                if (lateralDistance < expandedRadius) {
-                    // This obstacle is in our path!
-                    const distToObstacle = Math.abs(obstacleLocalPos.z);
-                    
-                    if (distToObstacle < closestDistance) {
-                        closestDistance = distToObstacle;
-                        closestObstacle = obstacle;
-                        closestLocalPos.copy(obstacleLocalPos);
-                    }
+                // Check if obstacle intersects with our detection box width
+                if (lateralDistance < expandedRadius && distanceAlongPath < closestDistance) {
+                    closestDistance = distanceAlongPath;
+                    closestObstacle = obstacle;
+                    closestLocalPos.copy(obstacleLocalPos);
                 }
             }
         }
         
-        // If we found a close obstacle, calculate avoidance force
-        if (closestObstacle !== null) {
-            // The closer the obstacle, the stronger the steering force
-            const multiplier = 1.0 + ((detectionBoxLength - closestDistance) / detectionBoxLength);
-            
-            // Calculate lateral force (steer to the side)
-            // Push away from obstacle in X and Y (lateral directions)
-            const lateralDistance = Math.sqrt(
-                closestLocalPos.x * closestLocalPos.x + 
-                closestLocalPos.y * closestLocalPos.y
-            );
-            
-            if (lateralDistance > 0.001) {
-                // Steer perpendicular to current lateral offset
-                force.x = (closestObstacle.boundingRadius - closestLocalPos.x) * multiplier;
-                force.y = (closestObstacle.boundingRadius - closestLocalPos.y) * multiplier * 0.5; // Less vertical force
-            } else {
-                // If directly ahead, pick a side to steer towards
-                force.x = closestObstacle.boundingRadius * multiplier * (Math.random() > 0.5 ? 1 : -1);
-            }
-            
-            // Apply braking force (negative Z in local space = slow down)
-            force.z = (closestObstacle.boundingRadius - Math.abs(closestLocalPos.z)) * this.brakingWeight;
-            
-            // Transform force from local space back to world space
-            force.applyQuaternion(fish.rotation);
+        return closestObstacle ? {
+            obstacle: closestObstacle,
+            localPosition: closestLocalPos,
+            distance: closestDistance
+        } : null;
+    }
+    
+    /**
+     * Calculate lateral (sideways) distance in XY plane
+     * This represents how far left/right/up/down the obstacle is from fish's forward path
+     */
+    _calculateLateralDistance(localPosition) {
+        return Math.sqrt(
+            localPosition.x * localPosition.x + 
+            localPosition.y * localPosition.y
+        );
+    }
+    
+    /**
+     * Calculate the actual avoidance force in fish's local space
+     * Force has three components:
+     * - X/Y: lateral steering to avoid obstacle
+     * - Z: braking force to slow down
+     */
+    _calculateAvoidanceForce(fish, obstacleData, detectionBoxLength) {
+        const force = new THREE.Vector3();
+        const { obstacle, localPosition, distance } = obstacleData;
+        
+        // Closer obstacles produce stronger forces
+        const proximityMultiplier = 1.0 + (detectionBoxLength - distance) / detectionBoxLength;
+        
+        // Calculate lateral steering force
+        const lateralDistance = this._calculateLateralDistance(localPosition);
+        
+        if (lateralDistance > 0.001) {
+            // Steer away from obstacle's lateral position
+            force.x = (obstacle.boundingRadius - localPosition.x) * proximityMultiplier;
+            force.y = (obstacle.boundingRadius - localPosition.y) * proximityMultiplier * 0.5;
+        } else {
+            // Obstacle is directly ahead - randomly pick a side to avoid
+            const randomDirection = Math.random() > 0.5 ? 1 : -1;
+            force.x = obstacle.boundingRadius * proximityMultiplier * randomDirection;
         }
         
+        // Apply braking force based on how close the obstacle is
+        const brakingForce = (obstacle.boundingRadius - distance) * this.brakingWeight;
+        force.z = brakingForce;
+        
         return force;
+    }
+    
+    /**
+     * Transform force from fish's local space to world space
+     * Modifies the force vector in place
+     */
+    _transformForceToWorldSpace(force, fishRotation) {
+        force.applyQuaternion(fishRotation);
     }
     
     /**
