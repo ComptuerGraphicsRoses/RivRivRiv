@@ -504,8 +504,11 @@ export class ObjectManager {
             this.scene.add(spotlight.target);
 
             // Create a visual indicator (cone mesh) - non-collidable
+            const visualConeGeometry = new THREE.ConeGeometry(0.5, 1.5, 8);
+            visualConeGeometry.computeBoundingBox();
+            visualConeGeometry.computeBoundingSphere();
             const visualCone = new THREE.Mesh(
-                new THREE.ConeGeometry(0.5, 1.5, 8),
+                visualConeGeometry,
                 new THREE.MeshBasicMaterial({
                     color: 0xffaa00,
                     transparent: true,
@@ -560,8 +563,6 @@ export class ObjectManager {
             placedObject.castShadow = true;
             placedObject.receiveShadow = true;
 
-            placedObject.geometry.computeBoundingBox();
-            placedObject.geometry.computeBoundingSphere();
 
             const worldBBox = placedObject.geometry.boundingBox.clone().applyMatrix4(placedObject.matrixWorld);
 
