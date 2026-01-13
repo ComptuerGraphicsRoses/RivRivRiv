@@ -80,6 +80,7 @@
   - [x] Bait - Attraction point (goal seeking)
     - [ ] 10 balık değince yok olsun tek balık değil (opsiyonel)
     - [ ] Yem bittiğinde final noktasına gitmeleri gerek (yenilemeyen bait veya direk final noktası gibi bi şey koyalım)
+    - [ ] Final noktası kontrolü distance ile yapılabilir
   - [x] (Spotlight already exists for lighting)
 
 - [x] **Spotlight UI controls** - Must meet BBM 412 requirements
@@ -96,10 +97,10 @@
 
 #### Game Systems
 - [ ] **Level system**
-  - [ ] JSON level definitions
   - [x] Inventory management (preparation phase)
   - [ ] Spawn zones and goal zones
-
+  - [ ] AABB collision ekle
+  - [ ] Balıkların belli bi yükseklikten yukarı ve zeminden aşağı gitmesini engelleyeceğiz
 - [ ] **Win/lose evaluation**
   - [ ] Survival percentage calculation
   - [ ] Timer enforcement (20 seconds)
