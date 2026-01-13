@@ -66,7 +66,7 @@ class FlockingFrenzy {
             this.sceneManager.createBait(new THREE.Vector3(15, 3, 0));
 
             // Add test obstacles for fish to avoid
-            this.sceneManager.addObstacle(new THREE.Vector3(5, 3, 0), 1.5, new THREE.Vector3(1, 2, 1));
+            // this.sceneManager.addObstacle(new THREE.Vector3(5, 3, 0), 1.5, new THREE.Vector3(1, 2, 1));
 
             // Setup UI
             this.ui.init(this.gameState);
