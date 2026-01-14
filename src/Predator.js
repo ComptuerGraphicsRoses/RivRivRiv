@@ -10,10 +10,13 @@ import {
 import * as THREE from 'three';
 
 export default class Predator {
-    constructor(position) {
+    constructor(position, flockingSystem = null) {
         this.position = position.clone();
         this.velocity = new THREE.Vector3();
         this.acceleration = new THREE.Vector3();
+
+        // Reference to flocking system for obstacle avoidance
+        this.flockingSystem = flockingSystem;
 
         // === AI PARAMETRELERİ ===
         this.maxSpeed = 2;          // balıktan hızlı
@@ -23,6 +26,9 @@ export default class Predator {
         this.captureRadius = 0.6;     // yakalama mesafesi
 
         this.wanderAngle = 0;
+
+        // Obstacle avoidance weight (lower than fish since predator is more aggressive)
+        this.obstacleAvoidanceWeight = 15.0;
     }
 
 
@@ -43,6 +49,13 @@ export default class Predator {
             this.applyForce(wanderForce);
         }
 
+        // 🪨 Obstacle avoidance - FlockingSystem üzerinden hesapla
+        if (this.flockingSystem) {
+            const obstacleAvoidanceForce = this.flockingSystem.calculateObstacleAvoidanceForPredator(this);
+            obstacleAvoidanceForce.multiplyScalar(this.obstacleAvoidanceWeight);
+            this.applyForce(obstacleAvoidanceForce);
+        }
+
         // Fizik entegrasyonu
         this.velocity.add(this.acceleration);
 
@@ -58,6 +71,11 @@ export default class Predator {
         this.position.x = Math.max(-BOUNDARY_HALF_X, Math.min(BOUNDARY_HALF_X, this.position.x));
         this.position.y = Math.max(BOUNDARY_MIN_Y, Math.min(BOUNDARY_MAX_Y, this.position.y));
         this.position.z = Math.max(-BOUNDARY_HALF_Z, Math.min(BOUNDARY_HALF_Z, this.position.z));
+
+        // 🪨 Obstacle collision correction (safety net)
+        if (this.flockingSystem) {
+            this.flockingSystem.correctPredatorObstacleCollisions(this);
+        }
 
         this.acceleration.set(0, 0, 0);
     }

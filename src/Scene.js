@@ -863,7 +863,8 @@ export class SceneManager {
     }
 
     spawnPredator = (position = new THREE.Vector3(0, 2, 0)) => {
-        const predator = new Predator(position);
+        // Pass flockingSystem reference for obstacle avoidance
+        const predator = new Predator(position, this.flockingSystem);
 
         // 🦈 Mesh
         const geometry = new THREE.ConeGeometry(0.4, 1.5, 12);

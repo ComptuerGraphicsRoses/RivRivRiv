@@ -21,6 +21,7 @@ export class FlockingSystem {
         this.fish = [];
         this.obstacles = [];
         this.baits = []; // Track multiple baits instead of single position
+        this.predator = null; // Reference to predator for obstacle avoidance
 
         // World boundaries - fish will be kept within these bounds
         this.boundaryRadius = 1;   // Distance from boundary where avoidance kicks in
@@ -50,6 +51,13 @@ export class FlockingSystem {
     /**
      * Add an obstacle
      */
+    /**
+     * Set predator reference for obstacle avoidance calculation
+     */
+    setPredator(predator) {
+        this.predator = predator;
+    }
+
     addObstacle(obstacle) {
         this.obstacles.push(obstacle);
     }
@@ -568,17 +576,20 @@ export class FlockingSystem {
 
         const finalMultiplier = proximityMultiplier + veryCloseBoost;
 
-        // Calculate lateral steering force
+        // Calculate lateral steering force - ONLY HORIZONTAL (X), NO VERTICAL (Y)
+        // This prevents oscillation/tumbling behavior
         const lateralDistance = this._calculateLateralDistance(localPosition);
 
         if (lateralDistance > 0.001) {
-            // Steer away from obstacle's lateral position
+            // Steer away from obstacle's lateral position - ONLY X axis
             force.x = (obstacle.boundingRadius - localPosition.x) * finalMultiplier;
-            force.y = (obstacle.boundingRadius - localPosition.y) * finalMultiplier * 0.5;
+            // NO Y force - this was causing oscillation
+            force.y = 0;
         } else {
-            // Obstacle is directly ahead - randomly pick a side to avoid
-            const randomDirection = Math.random() > 0.5 ? 1 : -1;
-            force.x = obstacle.boundingRadius * finalMultiplier * randomDirection;
+            // Obstacle is directly ahead - pick a side to avoid based on slight offset
+            // Use a consistent direction based on fish position to avoid flickering
+            force.x = obstacle.boundingRadius * finalMultiplier;
+            force.y = 0;
         }
 
         // Smooth braking curve - stronger when closer
@@ -648,28 +659,28 @@ export class FlockingSystem {
                 // Calculate penetration depth in ellipsoid space
                 const penetrationDepth = minDistance - distanceInEllipsoidSpace;
 
-                // Calculate push direction in ellipsoid space
+                // Calculate push direction in ellipsoid space - NO Y to prevent oscillation
                 let pushDirectionEllipsoidSpace;
                 if (distanceInEllipsoidSpace > 0.001) {
-                    // Normal case: push away from center in ellipsoid space
-                    pushDirectionEllipsoidSpace = fishInEllipsoidSpace.clone().normalize();
+                    // Normal case: push away from center, but only laterally (X/Z)
+                    pushDirectionEllipsoidSpace = fishInEllipsoidSpace.clone();
+                    pushDirectionEllipsoidSpace.y = 0; // Remove Y component completely
+                    if (pushDirectionEllipsoidSpace.lengthSq() > 0.0001) {
+                        pushDirectionEllipsoidSpace.normalize();
+                    } else {
+                        // If directly above/below, pick consistent lateral direction
+                        pushDirectionEllipsoidSpace.set(1, 0, 1).normalize();
+                    }
                 } else {
-                    // Edge case: fish exactly at obstacle center, push in random direction
-                    pushDirectionEllipsoidSpace = new THREE.Vector3(
-                        Math.random() - 0.5,
-                        Math.random() - 0.5,
-                        Math.random() - 0.5
-                    ).normalize();
+                    // Edge case: fish exactly at obstacle center, push in consistent lateral direction
+                    pushDirectionEllipsoidSpace = new THREE.Vector3(1, 0, 1).normalize();
                 }
 
                 // Transform push direction back to world space
-                // The gradient of the ellipsoid surface points in the direction of (x/a², y/b², z/c²)
-                // This is equivalent to multiplying by inverse scale squared, then normalizing
                 const pushDirectionWorldSpace = pushDirectionEllipsoidSpace.clone().multiply(invScale).normalize();
 
                 // Apply smooth repulsion via velocity instead of position jump
-                // Strength based on penetration depth - deeper = stronger push
-                const repulsionStrength = (penetrationDepth + 0.2) * 8.0; // Strong but smooth
+                const repulsionStrength = (penetrationDepth + 0.3) * 12.0; // Stronger and faster correction
                 const repulsionVelocity = pushDirectionWorldSpace.multiplyScalar(repulsionStrength);
                 fish.velocity.add(repulsionVelocity);
 
@@ -681,6 +692,155 @@ export class FlockingSystem {
                     // Remove the component moving toward obstacle
                     const velocityCorrection = toObstacleNorm.multiplyScalar(velocityTowardObstacle);
                     fish.velocity.sub(velocityCorrection);
+                }
+            }
+        }
+    }
+
+    /**
+     * Calculate obstacle avoidance force for predator
+     * Uses the same logic as fish obstacle avoidance but returns RAW force
+     * Weight will be applied in Predator.update()
+     * @param {Predator} predator - The predator to calculate avoidance for
+     * @returns {THREE.Vector3} - The raw avoidance force (no weight applied)
+     */
+    calculateObstacleAvoidanceForPredator(predator) {
+        const force = new THREE.Vector3();
+
+        if (this.obstacles.length === 0) return force;
+
+        // Predator-specific detection box length (shorter than fish)
+        const predatorDetectionBoxMinLength = 2.0;
+        const speedRatio = predator.velocity.length() / predator.maxSpeed;
+        const detectionBoxLength = predatorDetectionBoxMinLength * (1 + speedRatio);
+
+        // Create a fish-like interface for the predator for reuse of existing methods
+        const predatorProxy = {
+            position: predator.position,
+            velocity: predator.velocity,
+            rotation: this._getPredatorRotation(predator),
+            maxSpeed: predator.maxSpeed,
+            boundingRadius: 0.5, // Predator's bounding radius for collision
+            getSpeed: () => predator.velocity.length()
+        };
+
+        const predatorLocalSpaceMatrix = this._createFishLocalSpaceMatrix(predatorProxy);
+        const closestObstacleData = this._findClosestObstacleInPath(
+            predatorProxy,
+            predatorLocalSpaceMatrix,
+            detectionBoxLength
+        );
+
+        if (closestObstacleData) {
+            const avoidanceForce = this._calculateAvoidanceForce(
+                predatorProxy,
+                closestObstacleData,
+                detectionBoxLength
+            );
+
+            this._transformForceToWorldSpace(avoidanceForce, predatorProxy.rotation);
+            const sphereToEllipsoidTransformation = new THREE.Matrix4().makeScale(
+                closestObstacleData.obstacle.scale.x,
+                closestObstacleData.obstacle.scale.y,
+                closestObstacleData.obstacle.scale.z
+            );
+
+            avoidanceForce.applyMatrix4(sphereToEllipsoidTransformation);
+
+            // Return raw force - weight will be applied in Predator.update()
+            return avoidanceForce;
+        }
+
+        return force;
+    }
+
+    /**
+     * Get predator's rotation as quaternion based on velocity direction
+     */
+    _getPredatorRotation(predator) {
+        const rotation = new THREE.Quaternion();
+        
+        if (predator.velocity.lengthSq() > 0.0001) {
+            const forward = predator.velocity.clone().normalize();
+            const up = new THREE.Vector3(0, 1, 0);
+            
+            // Create rotation matrix from forward direction
+            const rotMatrix = new THREE.Matrix4();
+            const right = new THREE.Vector3().crossVectors(up, forward).normalize();
+            const correctedUp = new THREE.Vector3().crossVectors(forward, right);
+            
+            rotMatrix.makeBasis(right, correctedUp, forward.negate());
+            rotation.setFromRotationMatrix(rotMatrix);
+        }
+        
+        return rotation;
+    }
+
+    /**
+     * Correct obstacle collisions for predator (safety net)
+     * Same logic as fish collision correction
+     */
+    correctPredatorObstacleCollisions(predator) {
+        for (const obstacle of this.obstacles) {
+            // Transform predator position into ellipsoid's local space
+            const predatorPosRelative = new THREE.Vector3().subVectors(predator.position, obstacle.position);
+
+            // Scale by inverse of ellipsoid scale to convert to unit sphere space
+            const invScale = new THREE.Vector3(
+                1.0 / obstacle.scale.x,
+                1.0 / obstacle.scale.y,
+                1.0 / obstacle.scale.z
+            );
+            const predatorInEllipsoidSpace = predatorPosRelative.clone().multiply(invScale);
+
+            // Distance in transformed space (as if obstacle is a unit sphere)
+            const distanceInEllipsoidSpace = predatorInEllipsoidSpace.length();
+
+            // Predator bounding radius
+            const predatorBoundingRadius = 0.5;
+            const maxInvScale = Math.max(invScale.x, invScale.y, invScale.z);
+            const predatorRadiusInEllipsoidSpace = predatorBoundingRadius * maxInvScale;
+
+            // Minimum distance in ellipsoid space
+            const minDistance = obstacle.boundingRadius + predatorRadiusInEllipsoidSpace;
+
+            // Check if predator is inside obstacle's boundary
+            if (distanceInEllipsoidSpace < minDistance) {
+                // Calculate penetration depth in ellipsoid space
+                const penetrationDepth = minDistance - distanceInEllipsoidSpace;
+
+                // Calculate push direction in ellipsoid space - NO Y to prevent oscillation
+                let pushDirectionEllipsoidSpace;
+                if (distanceInEllipsoidSpace > 0.001) {
+                    // Normal case: push away from center, but only laterally (X/Z)
+                    pushDirectionEllipsoidSpace = predatorInEllipsoidSpace.clone();
+                    pushDirectionEllipsoidSpace.y = 0; // Remove Y component completely
+                    if (pushDirectionEllipsoidSpace.lengthSq() > 0.0001) {
+                        pushDirectionEllipsoidSpace.normalize();
+                    } else {
+                        // If directly above/below, pick consistent lateral direction
+                        pushDirectionEllipsoidSpace.set(1, 0, 1).normalize();
+                    }
+                } else {
+                    // Edge case: predator exactly at obstacle center, push in consistent lateral direction
+                    pushDirectionEllipsoidSpace = new THREE.Vector3(1, 0, 1).normalize();
+                }
+
+                // Transform push direction back to world space
+                const pushDirectionWorldSpace = pushDirectionEllipsoidSpace.clone().multiply(invScale).normalize();
+
+                // Apply smooth repulsion via velocity - faster correction
+                const repulsionStrength = (penetrationDepth + 0.3) * 12.0; // Stronger and faster
+                const repulsionVelocity = pushDirectionWorldSpace.multiplyScalar(repulsionStrength);
+                predator.velocity.add(repulsionVelocity);
+
+                // Dampen any velocity toward the obstacle
+                const toObstacle = new THREE.Vector3().subVectors(obstacle.position, predator.position);
+                const toObstacleNorm = toObstacle.normalize();
+                const velocityTowardObstacle = predator.velocity.dot(toObstacleNorm);
+                if (velocityTowardObstacle > 0) {
+                    const velocityCorrection = toObstacleNorm.multiplyScalar(velocityTowardObstacle);
+                    predator.velocity.sub(velocityCorrection);
                 }
             }
         }
