@@ -457,8 +457,21 @@ class FlockingFrenzy {
                 break;
 
             case 'n':
-                // Animate camera to team names scene
-                this.camera.animateToNamesScene();
+                // Next level (only in EVALUATION phase after winning) or view team names
+                if (this.gameState.phase === 'EVALUATION') {
+                    const survivalRate = this.gameState.fishSaved / this.gameState.fishTotal;
+                    const isWin = survivalRate >= this.gameState.requiredSurvivalPercentage;
+                    const nextLevelId = this.getNextLevelId();
+
+                    if (isWin && nextLevelId) {
+                        this.ui.hideGameEndPopup();
+                        this.loadNewLevel(nextLevelId);
+                        console.log(`✓ Loading next level via N key: ${nextLevelId}`);
+                    }
+                } else {
+                    // Animate camera to team names scene
+                    this.camera.animateToNamesScene();
+                }
                 break;
         }
         
