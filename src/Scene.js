@@ -387,18 +387,18 @@ export class SceneManager {
         // Configuration for importing obstacles from Blender FBX (apply GAME_SCALE)
         const OBSTACLE_IMPORT_CONFIG = {
             // Position scale factor (scaled by GAME_SCALE)
-            positionScale: 0.01 * GAME_SCALE,
+            positionScale: 0.05 * GAME_SCALE,
 
             // Position offset to align with Scene.fbx coordinate system (scaled)
-            positionOffset: new THREE.Vector3(0, -1, 0).multiplyScalar(GAME_SCALE),
+            positionOffset: new THREE.Vector3(0, 0, 0).multiplyScalar(GAME_SCALE),
 
             // Scale multiplier to match Blender units (scaled by GAME_SCALE)
-            scaleMultiplier: 0.01
+            scaleMultiplier: 0.05
         };
 
         return new Promise((resolve, reject) => {
             loader.load(
-                '../assets/test/ObstacleSpheres.fbx',
+                '../assets/models/AllSceneColliders.fbx',
                 (fbx) => {
                     let sphereCount = 0;
 
