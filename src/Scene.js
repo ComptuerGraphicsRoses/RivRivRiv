@@ -31,6 +31,9 @@ export class SceneManager {
         // Bait (goal) object
         this.bait = null;
         this.skybox = null;
+
+        this.fishModel = null;     
+        this.fishLoader = new FBXLoader();
     }
 
     init = async (shaderManager) => {
@@ -56,6 +59,9 @@ export class SceneManager {
         this.spawnPredator(new THREE.Vector3(0, 3, 0));
         // Create team names scene (in separate area)
         this.createTeamNamesScene();
+
+        await this.loadFishModel();
+
     }
 
     loadSceneModel = async () => {
@@ -65,7 +71,7 @@ export class SceneManager {
             loader.load(
                 '../assets/models/Scene.fbx',
                 (fbx) => {
-                    fbx.scale.set(0.05, 0.05, 0.05);
+                    fbx.scale.set(1, 1, 1);
                     this.scene.add(fbx);
                     console.log('✓ Scene.fbx loaded with textures');
                     resolve(fbx);
@@ -80,6 +86,36 @@ export class SceneManager {
             );
         });
     }
+
+    loadFishModel = async () => {
+        return new Promise((resolve, reject) => {
+            this.fishLoader.load(
+                '../assets/models/fish.fbx',
+                (fbx) => {
+                    // Ölçek (modeline göre ayarla)
+                    fbx.scale.set(0.15, 0.15, 0.15);
+
+                    // Gölge ayarları
+                    fbx.traverse(child => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+
+                    this.fishModel = fbx;
+                    console.log('✓ Fish model loaded');
+                    resolve();
+                },
+                undefined,
+                (error) => {
+                    console.error('Fish FBX load error', error);
+                    reject(error);
+                }
+            );
+        });
+    };
+
 
     /**
      * Generic function to load an FBX mesh
@@ -486,6 +522,13 @@ export class SceneManager {
      * Spawn a school of fish
      */
     spawnFishSchool = (count = 50) => {
+
+        if (!this.fishModel) {
+        console.warn('Fish model not loaded yet');
+        return;
+        }
+
+        /*
         const fishGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
         fishGeometry.rotateX(Math.PI * -0.5); // Point forward
 
@@ -495,7 +538,7 @@ export class SceneManager {
             metalness: 0.4,
             emissive: 0x1a3a5a,
             emissiveIntensity: 0.2
-        });
+        });*/
 
         for (let i = 0; i < count; i++) {
             // Create fish entity
@@ -515,11 +558,31 @@ export class SceneManager {
                 -0.5 + Math.random()
             );
 
+
+            const fishMesh = this.fishModel.clone(true);
+
+            fishMesh.scale.set(5, 5, 5);
+
+            /*
             // Create mesh
             const mesh = new THREE.Mesh(fishGeometry, fishMaterial.clone());
             mesh.castShadow = true;
             fish.setMesh(mesh);
-            this.scene.add(mesh);
+            this.scene.add(mesh);*/
+
+            fishMesh.traverse(child => {
+                if (child.isMesh) {
+                    console.log('Mesh found', child);
+                    child.material = child.material.clone();
+                }
+            });
+
+            fishMesh.position.copy(fish.position);
+
+            this.scene.add(fishMesh);
+            console.log('Fish mesh added:', fishMesh);
+
+            fish.setMesh(fishMesh);
 
             // Add to flocking system
             this.flockingSystem.addFish(fish);
