@@ -161,6 +161,15 @@ class FlockingFrenzy {
             );
             console.log('✓ Spawn zone created');
 
+            // Create predator spawn zone visualizations
+            const predatorConfig = this.currentLevelConfig.predatorConfig;
+            if (predatorConfig && predatorConfig.spawns) {
+                for (const spawn of predatorConfig.spawns) {
+                    this.sceneManager.createPredatorSpawnZone(spawn.position);
+                }
+                console.log(`✓ ${predatorConfig.spawns.length} predator spawn zone(s) created`);
+            }
+
             // Start render loop
             this.animate();
             console.log('✓ Render loop started');
@@ -202,6 +211,7 @@ class FlockingFrenzy {
 
         // Clear spawn zone when simulation starts
         this.sceneManager.clearSpawnZones();
+        this.sceneManager.clearPredatorSpawnZones();
 
         console.log('✓ Fish and predators spawned - simulation active!');
     }
@@ -288,6 +298,7 @@ class FlockingFrenzy {
             this.sceneManager.clearPredators();
             this.sceneManager.clearGoalZones();
             this.sceneManager.clearSpawnZones();
+            this.sceneManager.clearPredatorSpawnZones();
             this.sceneManager.removeGoalBait();
             this.sceneManager.flockingSystem.clearBaits();
         }
@@ -314,6 +325,14 @@ class FlockingFrenzy {
             fishConfig.spawnSpread,
             0xff9900
         );
+
+        // Create predator spawn zones
+        const predatorConfig = levelConfig.predatorConfig;
+        if (predatorConfig && predatorConfig.spawns) {
+            for (const spawn of predatorConfig.spawns) {
+                this.sceneManager.createPredatorSpawnZone(spawn.position);
+            }
+        }
 
         console.log(`✓ Loaded level: ${levelConfig.name}`);
         console.log('Place all items and press "Start Simulation" to begin!');

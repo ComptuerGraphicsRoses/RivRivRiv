@@ -26,6 +26,7 @@ export class SceneManager {
         this.predators = [];
         this.goalZones = []; // Goal zones for fish to reach
         this.spawnZones = []; // Fish spawn zones for visualization
+        this.predatorSpawnZones = []; // Predator spawn zones for visualization
 
         // Flocking system
         this.flockingSystem = new FlockingSystem();
@@ -875,6 +876,88 @@ export class SceneManager {
         }
         this.spawnZones = [];
         console.log('✓ Spawn zones cleared');
+    }
+
+    /**
+     * Create a predator spawn zone visualization where predators will spawn
+     * Uses a red/dark color scheme to indicate danger
+     */
+    createPredatorSpawnZone = (position, color = 0xff0000) => {
+        const radius = 1.5; // Size of the spawn marker
+
+        // Create sphere geometry for predator spawn point
+        const geometry = new THREE.SphereGeometry(radius, 16, 16);
+        const material = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.25,
+            wireframe: false
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.copy(position);
+        this.scene.add(mesh);
+
+        // Create wireframe sphere
+        const wireframeGeometry = new THREE.SphereGeometry(radius, 16, 16);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: color,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.6
+        });
+        const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+        wireframeMesh.position.copy(position);
+        this.scene.add(wireframeMesh);
+
+        // Create a warning icon (exclamation mark style - cone pointing up)
+        const iconGeometry = new THREE.ConeGeometry(0.3, 0.8, 8);
+        const iconMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffff00, // Yellow warning color
+            transparent: true,
+            opacity: 0.8
+        });
+        const iconMesh = new THREE.Mesh(iconGeometry, iconMaterial);
+        iconMesh.position.copy(position);
+        iconMesh.position.y += radius + 0.5; // Position above the sphere
+        this.scene.add(iconMesh);
+
+        const predatorSpawnZone = {
+            position: position.clone(),
+            mesh: mesh,
+            wireframeMesh: wireframeMesh,
+            iconMesh: iconMesh
+        };
+
+        this.predatorSpawnZones.push(predatorSpawnZone);
+        console.log(`✓ Created predator spawn zone at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+
+        return predatorSpawnZone;
+    }
+
+    /**
+     * Clear all predator spawn zones
+     */
+    clearPredatorSpawnZones = () => {
+        for (const spawnZone of this.predatorSpawnZones) {
+            if (spawnZone.mesh) {
+                this.scene.remove(spawnZone.mesh);
+                if (spawnZone.mesh.geometry) spawnZone.mesh.geometry.dispose();
+                if (spawnZone.mesh.material) spawnZone.mesh.material.dispose();
+            }
+            if (spawnZone.wireframeMesh) {
+                this.scene.remove(spawnZone.wireframeMesh);
+                if (spawnZone.wireframeMesh.geometry) spawnZone.wireframeMesh.geometry.dispose();
+                if (spawnZone.wireframeMesh.material) spawnZone.wireframeMesh.material.dispose();
+            }
+            if (spawnZone.iconMesh) {
+                this.scene.remove(spawnZone.iconMesh);
+                if (spawnZone.iconMesh.geometry) spawnZone.iconMesh.geometry.dispose();
+                if (spawnZone.iconMesh.material) spawnZone.iconMesh.material.dispose();
+            }
+        }
+        this.predatorSpawnZones = [];
+        console.log('✓ Predator spawn zones cleared');
     }
 
     /**

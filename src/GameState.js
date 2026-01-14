@@ -144,6 +144,7 @@ export class GameState {
             this.sceneManager.clearPredators();
             this.sceneManager.clearGoalZones();
             this.sceneManager.clearSpawnZones();
+            this.sceneManager.clearPredatorSpawnZones();
             this.sceneManager.removeGoalBait(); // Remove goal bait
             this.sceneManager.flockingSystem.clearBaits(); // Clear bait tracking
 
@@ -164,6 +165,14 @@ export class GameState {
                 fishConfig.spawnSpread,
                 0xff9900
             );
+
+            // Recreate predator spawn zones
+            const predatorConfig = this.currentLevelConfig.predatorConfig;
+            if (predatorConfig && predatorConfig.spawns) {
+                for (const spawn of predatorConfig.spawns) {
+                    this.sceneManager.createPredatorSpawnZone(spawn.position);
+                }
+            }
         }
 
         console.log('Level restarted - place all items to begin');
