@@ -173,6 +173,9 @@ export class GameState {
     
     onFishReachedGoal = () => {
         this.fishSaved++;
+        // Fish dies when reaching goal (calls onDeath which decreases fishAlive)
+        // But we compensate by adding 1 back, so fishAlive only decreases for real deaths
+        this.fishAlive++;
     }
     
     update = (deltaTime) => {
@@ -187,7 +190,14 @@ export class GameState {
         this.score -= 0.5 * deltaTime;
         this.score = Math.max(0, this.score);
         
-        // Check win/lose conditions
+        // Check if all fish are accounted for (none left alive in scene)
+        if (this.fishAlive === this.fishSaved) {
+            console.log('All fish accounted for (saved or dead) - ending simulation');
+            this.evaluateLevel();
+            return;
+        }
+
+        // Check if time ran out
         if (this.timeRemaining <= 0) {
             this.evaluateLevel();
         }

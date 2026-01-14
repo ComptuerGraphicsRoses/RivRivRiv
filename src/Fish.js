@@ -27,7 +27,7 @@ export class Fish {
         
         // State
         this.alive = true;
-        this.reachedGoal = false;
+        this.reachedGoal = false; // Marked true when fish reaches goal (before death)
         this.wasDead = false; // Track if death callback was already called
 
         // Bait consumption

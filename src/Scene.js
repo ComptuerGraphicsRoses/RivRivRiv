@@ -768,28 +768,28 @@ export class SceneManager {
         if (this.goalZones.length === 0) return;
 
         for (const fish of this.fish) {
-            // Skip fish that are dead or already reached goal
-            if (!fish.alive || fish.reachedGoal) continue;
+            // Skip fish that are already dead
+            if (!fish.alive) continue;
 
             // Check against all goal zones
             for (const goalZone of this.goalZones) {
                 const distance = fish.position.distanceTo(goalZone.position);
 
                 if (distance <= goalZone.radius) {
-                    // Mark fish as reached goal
+                    // Mark fish as having reached goal (before killing it)
                     fish.reachedGoal = true;
 
-                    // Hide fish mesh for performance
-                    if (fish.mesh) {
-                        fish.mesh.visible = false;
-                    }
+                    // Kill the fish (makes it truly dead, invisible, not targetable)
+                    // This will trigger onDeath callback which decreases fishAlive
+                    fish.die();
 
-                    // Notify game state
+                    // Notify game state to increase fishSaved
+                    // GameState will compensate fishAlive by adding 1 back
                     if (onFishReachGoal) {
                         onFishReachGoal();
                     }
 
-                    console.log(`🐟 Fish reached goal! (${this.fish.filter(f => f.reachedGoal).length} total)`);
+                    console.log(`🐟 Fish reached goal and saved!`);
 
                     break; // Fish reached a goal, no need to check other zones
                 }
