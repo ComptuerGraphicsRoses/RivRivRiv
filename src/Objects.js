@@ -127,13 +127,30 @@ export class ObjectManager {
                 // Setup FBX as preview object
                 fbx.scale.copy(objectType.fbxScale);
 
-                // Make it semi-transparent for preview
+                // Make it semi-transparent for preview while preserving textures
                 fbx.traverse((child) => {
                     if (child.isMesh) {
-                        child.material = new THREE.MeshStandardMaterial({
-                            color: this.getPreviewColor(this.selectedShape),
-                            transparent: true,
-                            opacity: 0.5
+                        // Handle both single materials and material arrays
+                        const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                        materials.forEach((mat, index) => {
+                            if (mat) {
+                                // Clone to avoid modifying cached FBX materials
+                                const clonedMat = mat.clone();
+                                clonedMat.transparent = true;
+                                clonedMat.opacity = 0.5;
+
+                                // Only tint if no diffuse texture
+                                if (!clonedMat.map) {
+                                    clonedMat.color.setHex(this.getPreviewColor(this.selectedShape));
+                                }
+
+                                if (Array.isArray(child.material)) {
+                                    child.material[index] = clonedMat;
+                                } else {
+                                    child.material = clonedMat;
+                                }
+                            }
                         });
                     }
                 });
@@ -210,7 +227,17 @@ export class ObjectManager {
                 this.previewObject.traverse((child) => {
                     if (child.isMesh) {
                         if (child.geometry) child.geometry.dispose();
-                        if (child.material) child.material.dispose();
+
+                        // Handle both single materials and material arrays
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(mat => {
+                                    if (mat && mat.dispose) mat.dispose();
+                                });
+                            } else if (child.material.dispose) {
+                                child.material.dispose();
+                            }
+                        }
                     }
                 });
             } else {
@@ -441,7 +468,20 @@ export class ObjectManager {
         if (this.previewObject.userData.isFBXModel) {
             this.previewObject.traverse((child) => {
                 if (child.isMesh && child.material) {
-                    child.material.color.setHex(color);
+                    // Handle both single materials and material arrays
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                    materials.forEach(mat => {
+                        if (mat && mat.color) {
+                            // Only update color if there's no texture map (to preserve texture appearance)
+                            if (!mat.map) {
+                                mat.color.setHex(color);
+                            } else if (hasCollision) {
+                                // For collision indication, always tint red even with textures
+                                mat.color.setHex(color);
+                            }
+                        }
+                    });
                 }
             });
         } else {
@@ -598,7 +638,17 @@ export class ObjectManager {
             obj.traverse((child) => {
                 if (child.isMesh) {
                     if (child.geometry) child.geometry.dispose();
-                    if (child.material) child.material.dispose();
+
+                    // Handle both single materials and material arrays
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(mat => {
+                                if (mat && mat.dispose) mat.dispose();
+                            });
+                        } else if (child.material.dispose) {
+                            child.material.dispose();
+                        }
+                    }
                 }
             });
         } else {
@@ -680,14 +730,27 @@ export class ObjectManager {
                 fbx.position.copy(position);
                 fbx.rotation.copy(rotation);
 
-                // Apply standard material to all meshes
+                // Preserve original materials and textures
                 fbx.traverse((child) => {
                     if (child.isMesh) {
-                        child.material = new THREE.MeshStandardMaterial({
-                            color: this.getPlacedColor(this.selectedShape),
-                            metalness: 0.3,
-                            roughness: 0.7
+                        // Handle both single materials and material arrays
+                        const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                        materials.forEach(mat => {
+                            if (mat) {
+                                // Keep original textures, adjust properties
+                                mat.metalness = 0.3;
+                                mat.roughness = 0.7;
+                                mat.transparent = false; // Remove preview transparency
+                                mat.opacity = 1.0;
+
+                                // Only change color if there's no texture map
+                                if (!mat.map) {
+                                    mat.color.setHex(this.getPlacedColor(this.selectedShape));
+                                }
+                            }
                         });
+
                         child.castShadow = true;
                         child.receiveShadow = true;
                     }
@@ -806,8 +869,8 @@ export class ObjectManager {
             // Check if this is an FBX model or regular geometry
             const objectTypeData = createObjectType(this.selectedShape);
 
-            if (objectTypeData.usesFBXModel && this.previewObject.userData.isFBXModel) {
-                // FBX model placement
+            if (objectTypeData.usesFBXModel) {
+                // FBX model placement (even if preview hasn't loaded yet)
                 this.placeFBXObject(objectTypeData);
             } else {
                 // Regular object placement (rocks, etc.)
@@ -945,7 +1008,17 @@ export class ObjectManager {
                 obj.traverse((child) => {
                     if (child.isMesh) {
                         if (child.geometry) child.geometry.dispose();
-                        if (child.material) child.material.dispose();
+
+                        // Handle both single materials and material arrays
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(mat => {
+                                    if (mat && mat.dispose) mat.dispose();
+                                });
+                            } else if (child.material.dispose) {
+                                child.material.dispose();
+                            }
+                        }
                     }
                 });
             } else {
