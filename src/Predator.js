@@ -117,7 +117,8 @@ export default class Predator {
     }
 
     tryToEat(fish) {
-        if (!fish.alive) return;
+        // Don't eat dead fish or fish that reached the goal
+        if (!fish.alive || fish.reachedGoal) return;
 
         const d = this.position.distanceTo(fish.position);
         if (d < this.captureRadius) {
