@@ -137,6 +137,6 @@
 
 - [x] item yerleştirme bug'ını çözmek
 
-- [ ] Balıkların köpek balığından kaçmasını yapcam
 - [ ] Köpek balığının obstacle avoidance'ı eklenecek
+- [ ] Balıkların köpek balığından kaçmasını yapcam
 - [ ] Yemleri duvarın dışına koyabiliyoruz, kötü
