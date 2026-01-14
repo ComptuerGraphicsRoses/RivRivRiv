@@ -130,3 +130,14 @@
 ## Fikirler
 
 - [ ] Balıkları takip eden spotlight eklenebilir (kullanıcının eklediğine ek olarak)
+
+- [x] Boid simülasyonu değerlerini fine tune edip balık sürüsü gibi olmasını sağlama
+
+- [x] Sahne sınırlarını implement edeceğim
+  - [x] Kamera sınırları aşamayacak
+  - [x] Balıklar sınırları aşamayacak
+  - [x] Köpek balığı sınırları aşamayacak
+
+- [ ] Balıkların köpek balığından kaçmasını yapcam
+- [ ] Köpek balığının obstacle avoidance'ı eklenecek
+- [x] item yerleştirme bug'ını çözmek

@@ -3,6 +3,14 @@
  * Manages Three.js scene, lighting, and objects
  */
 
+import {
+    GAME_SCALE,
+    BOUNDARY_HALF_X, 
+    BOUNDARY_MIN_Y,
+    BOUNDARY_MAX_Y,
+    BOUNDARY_HALF_Z,
+} from "./FlockingSystem.js";
+
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { Fish } from './Fish.js';
@@ -13,7 +21,7 @@ export class SceneManager {
     constructor() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x158DA0); // Deep water color
-        this.scene.fog = new THREE.Fog(0x158DA0, 0, 20);
+        this.scene.fog = new THREE.Fog(0x158DA0, 0, 20 * GAME_SCALE);
 
         this.lights = {
             directional: null,
@@ -60,8 +68,7 @@ export class SceneManager {
         //this.createTestScene();
 
         this.createGroundPlane();
-
-        // DON'T spawn predators here - they will spawn when simulation starts
+        this.createBoundaryVisualization();  // Show fish boundary area
         // Create team names scene (in separate area)
         this.createTeamNamesScene();
     }
@@ -73,9 +80,10 @@ export class SceneManager {
             loader.load(
                 '../assets/models/Scene.fbx',
                 (fbx) => {
-                    fbx.scale.set(0.05, 0.05, 0.05);
+                    const baseScale = 0.05 * GAME_SCALE;
+                    fbx.scale.set(baseScale, baseScale, baseScale);
                     this.scene.add(fbx);
-                    console.log('✓ Scene.fbx loaded with textures');
+                    console.log(`✓ Scene.fbx loaded with textures (scale: ${GAME_SCALE}x)`);
                     resolve(fbx);
                 },
                 (progress) => {
@@ -104,11 +112,15 @@ export class SceneManager {
             loader.load(
                 filePath,
                 (fbx) => {
-                    fbx.scale.copy(scale);
-                    fbx.position.copy(position);
+                    // Apply GAME_SCALE to both scale and position
+                    const scaledScale = scale.clone().multiplyScalar(GAME_SCALE);
+                    const scaledPosition = position.clone().multiplyScalar(GAME_SCALE);
+                    
+                    fbx.scale.copy(scaledScale);
+                    fbx.position.copy(scaledPosition);
                     fbx.rotation.copy(rotation);
                     this.scene.add(fbx);
-                    console.log(`✓ FBX mesh loaded: ${filePath} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+                    console.log(`✓ FBX mesh loaded: ${filePath} at (${scaledPosition.x.toFixed(2)}, ${scaledPosition.y.toFixed(2)}, ${scaledPosition.z.toFixed(2)}) scale ${GAME_SCALE}x`);
                     resolve(fbx);
                 },
                 (progress) => {
@@ -132,6 +144,7 @@ export class SceneManager {
                     // Create GroundedSkybox with the loaded texture
                     this.skybox = new GroundedSkybox(texture, 15, 15);
                     this.skybox.position.y = 10; // Adjust height as needed
+                    this.skybox.scale.multiplyScalar(GAME_SCALE);
                     this.scene.add(this.skybox);
 
                     console.log('✓ Skybox loaded successfully');
@@ -189,7 +202,7 @@ export class SceneManager {
                             child.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
 
                             // Apply scale and position offset
-                            worldPosition.multiplyScalar(BOUNDARY_CONFIG.positionScale);
+                            worldPosition.multiplyScalar(BOUNDARY_CONFIG.positionScale * GAME_SCALE);
                             worldPosition.add(BOUNDARY_CONFIG.positionOffset);
                             worldScale.multiplyScalar(BOUNDARY_CONFIG.scaleMultiplier);
 
@@ -206,7 +219,7 @@ export class SceneManager {
                                 this.isSphereGeometry(geometry);
 
                             if (isSphere) {
-                                const radius = boundingSphere.radius;
+                                const radius = boundingSphere.radius * GAME_SCALE;
                                 const data = this.addObstacle(worldPosition, radius, worldScale, worldQuaternion);
                                 boundaryData.push(data); // Store for later removal
 
@@ -267,19 +280,15 @@ export class SceneManager {
     loadObstaclesFromFBX = async () => {
         const loader = new FBXLoader();
 
-        // Configuration for importing obstacles from Blender FBX
-        // TODO: These values should match the export settings from Blender
+        // Configuration for importing obstacles from Blender FBX (apply GAME_SCALE)
         const OBSTACLE_IMPORT_CONFIG = {
-            // Position scale factor (1.0 = no scaling)
-            positionScale: 0.01,
+            // Position scale factor (scaled by GAME_SCALE)
+            positionScale: 0.01 * GAME_SCALE,
 
-            // Position offset to align with Scene.fbx coordinate system
-            // Needed because ObstacleSpheres.fbx and Scene.fbx may have different origins
-            positionOffset: new THREE.Vector3(0, -1, 0),
+            // Position offset to align with Scene.fbx coordinate system (scaled)
+            positionOffset: new THREE.Vector3(0, -1, 0).multiplyScalar(GAME_SCALE),
 
-            // Scale multiplier to match Blender units
-            // 0.6 suggests a unit mismatch between Blender export and Three.js scene
-            // Check Blender Scene Properties > Units > Unit Scale
+            // Scale multiplier to match Blender units (scaled by GAME_SCALE)
             scaleMultiplier: 0.01
         };
 
@@ -320,9 +329,8 @@ export class SceneManager {
                                 this.isSphereGeometry(geometry);
 
                             if (isSphere) {
-                                // Use bounding sphere radius directly from geometry (local space)
-                                // The worldScale will handle the actual size transformation
-                                const radius = boundingSphere.radius;
+                                // Scale radius to match world scale
+                                const radius = boundingSphere.radius * GAME_SCALE;
 
                                 // Add as obstacle with ellipsoid scale and rotation
                                 // The obstacle will be: sphere with base radius, scaled by worldScale
@@ -439,7 +447,7 @@ export class SceneManager {
     }
 
     createGroundPlane() {
-        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundGeometry = new THREE.PlaneGeometry(100 * GAME_SCALE, 100 * GAME_SCALE);
 
         // Load sandy texture
         const textureLoader = new THREE.TextureLoader();
@@ -448,7 +456,7 @@ export class SceneManager {
         // Configure texture wrapping and repeat for better appearance
         sandyTexture.wrapS = THREE.RepeatWrapping;
         sandyTexture.wrapT = THREE.RepeatWrapping;
-        sandyTexture.repeat.set(20, 20); // Adjust repeat for better tiling
+        sandyTexture.repeat.set(20 * GAME_SCALE, 20 * GAME_SCALE); // Scaled with world
 
         const groundMaterial = new THREE.MeshStandardMaterial({
             map: sandyTexture,
@@ -460,6 +468,34 @@ export class SceneManager {
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
+    }
+
+    /**
+     * Create wireframe visualization for fish boundary area
+     * Shows the play area where fish are confined
+     */
+    createBoundaryVisualization = () => {
+        // Calculate box dimensions and center position
+        const width = BOUNDARY_HALF_X * 2;   // 20
+        const height = BOUNDARY_MAX_Y - BOUNDARY_MIN_Y; // 6.5
+        const depth = BOUNDARY_HALF_Z * 2;   // 20
+        
+        const centerY = (BOUNDARY_MIN_Y + BOUNDARY_MAX_Y) / 2; // 1.75
+        
+        // Create wireframe box
+        const boundaryGeometry = new THREE.BoxGeometry(width, height, depth);
+        const boundaryMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,  // Green color for boundary
+            wireframe: true,
+            transparent: true,
+            opacity: 0.3
+        });
+        
+        const boundaryBox = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+        boundaryBox.position.set(0, centerY, 0);
+        this.scene.add(boundaryBox);
+        
+        console.log(`✓ Boundary visualization created: ${width}x${height}x${depth} at (0, ${centerY.toFixed(2)}, 0)`);
     }
 
     createTeamNamesScene = () => {
@@ -534,7 +570,7 @@ export class SceneManager {
     /**
      * Create bait (goal) object
      */
-    createBait = (position = new THREE.Vector3(10, 3, 10)) => {
+    createBait = (position = new THREE.Vector3(30, 8, 30)) => {
         const baitGeometry = new THREE.SphereGeometry(0.3, 16, 16);
         const baitMaterial = new THREE.MeshStandardMaterial({
             color: 0xffff00,
@@ -1021,7 +1057,7 @@ export class SceneManager {
 
         // 🦈 Update predators
         this.predators.forEach(predator => {
-            predator.update(deltaTime, this.fish);
+            predator.update(deltaTime, this.fish, this.flockingSystem.obstacles);
 
             if (predator.mesh) {
                 predator.mesh.position.copy(predator.position);

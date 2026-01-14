@@ -4,6 +4,7 @@
  * Makes it easy for Fish.js and other systems to identify object properties
  */
 
+import { GAME_SCALE } from "./FlockingSystem.js";
 import * as THREE from 'three';
 
 /**
@@ -22,7 +23,7 @@ export class PlaceableObject {
      * @returns {THREE.BufferGeometry}
      */
     createGeometry() {
-        return new THREE.BoxGeometry(this.size, this.size, this.size);
+        return new THREE.BoxGeometry(this.size * GAME_SCALE, this.size * GAME_SCALE, this.size * GAME_SCALE);
     }
 }
 
@@ -46,7 +47,7 @@ export class Rock1 extends PlaceableObject {
 
     createGeometry() {
         // Fallback geometry for preview placeholder
-        return new THREE.BoxGeometry(2, 2, 2);
+        return new THREE.BoxGeometry(2 * GAME_SCALE, 2 * GAME_SCALE, 2 * GAME_SCALE);
     }
 }
 
@@ -68,7 +69,7 @@ export class Rock2 extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.BoxGeometry(3, 2.5, 2.5);
+        return new THREE.BoxGeometry(3 * GAME_SCALE, 2.5 * GAME_SCALE, 2.5 * GAME_SCALE);
     }
 }
 
@@ -93,7 +94,7 @@ export class Rock3 extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.BoxGeometry(4, 3, 3);
+        return new THREE.BoxGeometry(4 * GAME_SCALE, 3 * GAME_SCALE, 3 * GAME_SCALE);
     }
 }
 
@@ -110,7 +111,7 @@ export class Bait extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.SphereGeometry(0.4, 16, 16);
+        return new THREE.SphereGeometry(0.4 * GAME_SCALE, 16, 16);
     }
 }
 
@@ -127,7 +128,7 @@ export class Spotlight extends PlaceableObject {
     }
 
     createGeometry() {
-        return new THREE.ConeGeometry(0.5, 1, 8);
+        return new THREE.ConeGeometry(0.5 * GAME_SCALE, 1 * GAME_SCALE, 8);
     }
 }
 
