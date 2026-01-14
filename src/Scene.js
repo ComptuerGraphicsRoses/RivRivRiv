@@ -87,34 +87,7 @@ export class SceneManager {
         });
     }
 
-    loadFishModel = async () => {
-        return new Promise((resolve, reject) => {
-            this.fishLoader.load(
-                '../assets/models/fish.fbx',
-                (fbx) => {
-                    // Ölçek (modeline göre ayarla)
-                    fbx.scale.set(0.15, 0.15, 0.15);
-
-                    // Gölge ayarları
-                    fbx.traverse(child => {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-
-                    this.fishModel = fbx;
-                    console.log('✓ Fish model loaded');
-                    resolve();
-                },
-                undefined,
-                (error) => {
-                    console.error('Fish FBX load error', error);
-                    reject(error);
-                }
-            );
-        });
-    };
+    
 
 
     /**
@@ -270,6 +243,19 @@ export class SceneManager {
             ROCK_SCALE
         );
     }
+
+    loadFishModel = async () => {
+
+        this.fishModel = await this.loadFBXMesh(
+            '../assets/models/fish.fbx',
+            new THREE.Vector3(0, -1000, 0), // sahnenin dışında
+            new THREE.Vector3(0.05, 0.05, 0.05)
+        );
+
+        this.fishModel.visible = false;
+        console.log('✓ Fish model cached');
+        
+    };
 
     /**
      * Load kaya1 boundary spheres as obstacles
@@ -521,76 +507,51 @@ export class SceneManager {
     /**
      * Spawn a school of fish
      */
-    spawnFishSchool = (count = 50) => {
+    spawnFishSchool = async (count = 50) => {
 
-        if (!this.fishModel) {
+    if (!this.fishModel) {
         console.warn('Fish model not loaded yet');
         return;
-        }
+    }
 
-        /*
-        const fishGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
-        fishGeometry.rotateX(Math.PI * -0.5); // Point forward
+    for (let i = 0; i < count; i++) {
+        const fish = new Fish();
 
-        const fishMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4a90e2,
-            roughness: 0.6,
-            metalness: 0.4,
-            emissive: 0x1a3a5a,
-            emissiveIntensity: 0.2
-        });*/
-
-        for (let i = 0; i < count; i++) {
-            // Create fish entity
-            const fish = new Fish();
-
-            // Random spawn position (in a cluster)
             fish.position.set(
                 -5 + Math.random() * 10,
                 2 + Math.random() * 3,
                 -5 + Math.random() * 10
             );
 
-            // Random initial velocity
             fish.velocity.set(
                 -0.5 + Math.random(),
                 -0.2 + Math.random() * 0.4,
                 -0.5 + Math.random()
             );
 
-
+            // 🔥 CLONE
             const fishMesh = this.fishModel.clone(true);
-
-            fishMesh.scale.set(5, 5, 5);
-
-            /*
-            // Create mesh
-            const mesh = new THREE.Mesh(fishGeometry, fishMaterial.clone());
-            mesh.castShadow = true;
-            fish.setMesh(mesh);
-            this.scene.add(mesh);*/
+            fishMesh.visible = true;
+            fishMesh.position.copy(fish.position);
 
             fishMesh.traverse(child => {
                 if (child.isMesh) {
-                    console.log('Mesh found', child);
                     child.material = child.material.clone();
+                    child.castShadow = true;
+                    child.receiveShadow = true;
                 }
             });
 
-            fishMesh.position.copy(fish.position);
-
             this.scene.add(fishMesh);
-            console.log('Fish mesh added:', fishMesh);
+            fish.mesh = fishMesh;
 
-            fish.setMesh(fishMesh);
-
-            // Add to flocking system
             this.flockingSystem.addFish(fish);
             this.fish.push(fish);
         }
 
         console.log(`✓ Spawned ${count} fish`);
-    }
+    };
+
 
     /**
      * Create bait (goal) object
