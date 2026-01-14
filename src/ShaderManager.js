@@ -219,6 +219,9 @@ export class ShaderManager {
                 ).normalize();
                 updates.spotLightDirection = targetDir;
             }
+            else {
+                updates.spotLightEnabled = false;
+            }
 
             // Apply updates to base uniforms
             for (const [key, value] of Object.entries(updates)) {

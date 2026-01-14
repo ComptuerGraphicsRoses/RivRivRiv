@@ -1013,6 +1013,7 @@ export class ObjectManager {
                     if (obj.userData.visual.material) obj.userData.visual.material.dispose();
                 }
                 if (obj.userData.target) this.scene.remove(obj.userData.target);
+                this.sceneManager.lights.spotlight = null;
             }
 
             // Handle FBX model cleanup
