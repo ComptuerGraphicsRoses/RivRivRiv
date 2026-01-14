@@ -502,9 +502,10 @@ export class SceneManager {
         this.lights.directional.target.position.set(0, 0, 0);
         this.lights.directional.castShadow = true;
         this.scene.add(this.lights.directional);
-        const helper = new THREE.DirectionalLightHelper(this.lights.directional, 5);
-
-        this.scene.add(helper);
+        
+        // const helper = new THREE.DirectionalLightHelper(this.lights.directional, 5);
+        // this.scene.add(helper);
+        
         // Spotlight (BBM 412 requirement)
         // this.lights.spotlight = new THREE.SpotLight(0xffffff, 2.0);
         // this.lights.spotlight.position.set(0, 10, 0);
@@ -806,21 +807,9 @@ export class SceneManager {
         this.flockingSystem.addObstacle(obstacle);
 
         // Add wireframe helper for extra visibility
-        const wireframeGeometry = new THREE.SphereGeometry(radius, 16, 16);
-        const wireframeMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffff00,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.6
-        });
-        const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
-        wireframeMesh.position.copy(position);
-        wireframeMesh.scale.copy(scale);
-        wireframeMesh.quaternion.copy(rotation); // Apply rotation
-        this.scene.add(wireframeMesh);
-
-        console.log(`✓ Added obstacle at (${position.x}, ${position.y}, ${position.z}) with radius ${radius}`);
-
+        // const wireframeMesh = this.showWireFrameObstacleSpheres(radius, position, scale, rotation);
+        const wireframeMesh = null;
+        
         // Return both obstacle and wireframe for later removal
         return {
             obstacle: obstacle,
@@ -1201,5 +1190,23 @@ export class SceneManager {
             }
         });
 
+    }
+
+    showWireFrameObstacleSpheres(radius, position, scale, rotation) {
+        const wireframeGeometry = new THREE.SphereGeometry(radius, 16, 16);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffff00,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.6
+        });
+        const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+        wireframeMesh.position.copy(position);
+        wireframeMesh.scale.copy(scale);
+        wireframeMesh.quaternion.copy(rotation); // Apply rotation
+        this.scene.add(wireframeMesh);
+
+        console.log(`✓ Added obstacle at (${position.x}, ${position.y}, ${position.z}) with radius ${radius}`);
+        return wireframeMesh;
     }
 }
