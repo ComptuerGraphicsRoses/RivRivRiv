@@ -174,6 +174,9 @@ export class ObjectManager {
     enterBuildMode() {
         const objectType = createObjectType(this.selectedShape);
 
+        // Reset rotation for new object placement
+        this.previewRotation.set(0, 0, 0);
+
         // Check if this object uses FBX model
         if (objectType.usesFBXModel) {
             // Load FBX model asynchronously
@@ -502,12 +505,19 @@ export class ObjectManager {
         onMouseMove(event) {
             if (this.rotationMode && this.previewObject) {
                 // Use movementX/Y from pointer lock for rotation
-                // For spotlight/cone: use Z and X axes instead of Y and X
+                // Check if object requires ground placement (only Y-axis rotation)
+                const objectTypeData = createObjectType(this.selectedShape);
+
                 if (this.selectedShape === 'spotlight') {
+                    // For spotlight/cone: use Z and X axes instead of Y and X
                     // Mouse X controls Z-axis (sideways tilt)
                     // Mouse Y controls X-axis (forward/backward tilt)
                     this.previewRotation.z += event.movementX * this.rotationSensitivity;
                     this.previewRotation.x += event.movementY * this.rotationSensitivity;
+                } else if (objectTypeData.requiresGroundPlacement) {
+                    // For ground-placed objects (e.g., Rock3): only rotate around Y-axis
+                    this.previewRotation.y += event.movementX * this.rotationSensitivity;
+                    // Ignore vertical mouse movement (no X-axis rotation)
                 } else {
                     // For regular objects: use Y and X axes
                     this.previewRotation.y += event.movementX * this.rotationSensitivity;
