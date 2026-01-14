@@ -3,6 +3,13 @@
  * Manages Three.js scene, lighting, and objects
  */
 
+import {
+    BOUNDARY_HALF_X, 
+    BOUNDARY_MIN_Y,
+    BOUNDARY_MAX_Y,
+    BOUNDARY_HALF_Z,
+} from "./FlockingSystem.js";
+
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { Fish } from './Fish.js';
@@ -53,6 +60,7 @@ export class SceneManager {
         //this.createTestScene();
 
         this.createGroundPlane();
+        this.createBoundaryVisualization();  // Show fish boundary area
         this.spawnPredator(new THREE.Vector3(0, 3, 0));
         // Create team names scene (in separate area)
         this.createTeamNamesScene();
@@ -454,6 +462,34 @@ export class SceneManager {
         this.scene.add(ground);
     }
 
+    /**
+     * Create wireframe visualization for fish boundary area
+     * Shows the play area where fish are confined
+     */
+    createBoundaryVisualization = () => {
+        // Calculate box dimensions and center position
+        const width = BOUNDARY_HALF_X * 2;   // 20
+        const height = BOUNDARY_MAX_Y - BOUNDARY_MIN_Y; // 6.5
+        const depth = BOUNDARY_HALF_Z * 2;   // 20
+        
+        const centerY = (BOUNDARY_MIN_Y + BOUNDARY_MAX_Y) / 2; // 1.75
+        
+        // Create wireframe box
+        const boundaryGeometry = new THREE.BoxGeometry(width, height, depth);
+        const boundaryMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,  // Green color for boundary
+            wireframe: true,
+            transparent: true,
+            opacity: 0.3
+        });
+        
+        const boundaryBox = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+        boundaryBox.position.set(0, centerY, 0);
+        this.scene.add(boundaryBox);
+        
+        console.log(`✓ Boundary visualization created: ${width}x${height}x${depth} at (0, ${centerY.toFixed(2)}, 0)`);
+    }
+
     createTeamNamesScene = () => {
         // This will be located at a separate area (e.g., y = -50)
         // For now, create placeholder text using 3D objects
@@ -516,7 +552,7 @@ export class SceneManager {
     /**
      * Create bait (goal) object
      */
-    createBait = (position = new THREE.Vector3(10, 3, 10)) => {
+    createBait = (position = new THREE.Vector3(30, 8, 30)) => {
         const baitGeometry = new THREE.SphereGeometry(0.3, 16, 16);
         const baitMaterial = new THREE.MeshStandardMaterial({
             color: 0xffff00,
