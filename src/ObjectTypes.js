@@ -69,7 +69,7 @@ export class Rock2 extends PlaceableObject {
         this.usesFBXModel = true;
         this.fbxMeshPath = '../assets/models/SM_Rocks_09B.fbx';
         this.fbxBoundariesPath = '../assets/models/RockColliderB.fbx';
-        this.fbxScale = new THREE.Vector3(0.02, 0.02, 0.02);
+        this.fbxScale = new THREE.Vector3(0.04, 0.04, 0.04);
     }
 
     createGeometry() {
@@ -91,7 +91,7 @@ export class Rock3 extends PlaceableObject {
         this.usesFBXModel = true;
         this.fbxMeshPath = '../assets/models/BigCoral.fbx';
         this.fbxBoundariesPath = '../assets/models/BigCoralColliders.fbx';
-        this.fbxScale = new THREE.Vector3(0.04, 0.04, 0.04);
+        this.fbxScale = new THREE.Vector3(0.05, 0.05, 0.05);
 
         // Rock3 must be placed at ground level (y=0)
         this.requiresGroundPlacement = true;
@@ -112,13 +112,6 @@ export class Bait extends PlaceableObject {
         this.size = 0.8;
         this.color = 0xff69b4; // Pink
         this.previewColor = 0x00ff00;
-
-        // Bait attributes - ATTRACTIVE!
-        this.isAttractive = true;
-        this.attractionRadius = 10;
-        this.attractionStrength = 1.5;
-        this.nutritionValue = 50;
-        this.isConsumable = true;  // Can be consumed by fish
     }
 
     createGeometry() {
@@ -136,13 +129,6 @@ export class Spotlight extends PlaceableObject {
         this.size = 1;
         this.color = 0xffaa00; // Orange
         this.previewColor = 0xffff00; // Yellow
-
-        // Spotlight attributes
-        this.lightIntensity = 6.0;
-        this.lightAngle = Math.PI / 9;
-        this.lightDistance = 10;
-        this.penumbra = 0.2;
-        this.decay = 1;
     }
 
     createGeometry() {

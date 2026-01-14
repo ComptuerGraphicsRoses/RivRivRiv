@@ -409,13 +409,6 @@ export class ObjectManager {
 
         this.previewObject.position.copy(position);
 
-        //const moved = position.distanceTo(this._lastPreviewPos) > this._previewMoveThreshold;
-        //if (forceCheck || moved) {
-        //    this._lastPreviewPos.copy(position);
-        //    const hasCollision = this.checkCollision(position);
-        //    this.updatePreviewColor(hasCollision);
-        //}
-
         // Update preview spotlight position and target if it exists
         if (this.previewSpotlight && this.previewSpotlightTarget) {
             this.previewSpotlight.position.copy(position);
@@ -429,106 +422,33 @@ export class ObjectManager {
         }
     }
 
-    checkCollision(position) {
-        const objectSize = this.getShapeSize(this.selectedShape);
-        const halfSize = objectSize * 0.6;
-        const previewSphereRadius = Math.sqrt(3 * halfSize * halfSize);
+    onMouseMove(event) {
+        if (this.rotationMode && this.previewObject) {
+            // Use movementX/Y from pointer lock for rotation
+            // Check if object requires ground placement (only Y-axis rotation)
+            const objectTypeData = createObjectType(this.selectedShape);
 
-        for (const p of this.placedObjects) {
-            if (position.distanceTo(p.position) < this.minDistance) {
-                return true;
-            }
-        }
-
-        const previewBox = new THREE.Box3().setFromCenterAndSize(
-            position,
-            new THREE.Vector3(objectSize, objectSize, objectSize)
-        );
-
-        for (const entry of this.collidables) {
-            const mesh = entry.mesh;
-            const localSphere = entry.localSphere;
-            const worldCenter = localSphere.center.clone().applyMatrix4(mesh.matrixWorld);
-            const maxScale = Math.max(mesh.scale.x, mesh.scale.y, mesh.scale.z);
-            const worldRadius = localSphere.radius * maxScale;
-            const dist = position.distanceTo(worldCenter);
-            if (dist > worldRadius + previewSphereRadius) continue;
-
-            if (!entry.worldBBox || entry.needsWorldBBoxUpdate) {
-                entry.worldBBox = entry.localBBox.clone().applyMatrix4(mesh.matrixWorld);
-                entry.needsWorldBBoxUpdate = false;
-            }
-            if (previewBox.intersectsBox(entry.worldBBox)) return true;
-        }
-
-        return position.y < 1;
-
-    }
-
-    updatePreviewColor(hasCollision) {
-        if (!this.previewObject) return;
-        if (!this.selectedShape) {
-            console.warn('updatePreviewColor called with undefined selectedShape');
-            return;
-        }
-
-        const color = hasCollision ? 0xff0000 : this.getPreviewColor(this.selectedShape);
-
-        // Handle FBX models (group objects with child meshes)
-        if (this.previewObject.userData.isFBXModel) {
-            this.previewObject.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    // Handle both single materials and material arrays
-                    const materials = Array.isArray(child.material) ? child.material : [child.material];
-
-                    materials.forEach(mat => {
-                        if (mat && mat.color) {
-                            // Only update color if there's no texture map (to preserve texture appearance)
-                            if (!mat.map) {
-                                mat.color.setHex(color);
-                            } else if (hasCollision) {
-                                // For collision indication, always tint red even with textures
-                                mat.color.setHex(color);
-                            }
-                        }
-                    });
-                }
-            });
-        } else {
-            // Handle regular mesh objects
-            if (this.previewObject.material && this.previewObject.material.color) {
-                this.previewObject.material.color.setHex(color);
-            }
-        }
-    }
-
-        onMouseMove(event) {
-            if (this.rotationMode && this.previewObject) {
-                // Use movementX/Y from pointer lock for rotation
-                // Check if object requires ground placement (only Y-axis rotation)
-                const objectTypeData = createObjectType(this.selectedShape);
-
-                if (this.selectedShape === 'spotlight') {
-                    // For spotlight/cone: use Z and X axes instead of Y and X
-                    // Mouse X controls Z-axis (sideways tilt)
-                    // Mouse Y controls X-axis (forward/backward tilt)
-                    this.previewRotation.z += event.movementX * this.rotationSensitivity;
-                    this.previewRotation.x += event.movementY * this.rotationSensitivity;
-                } else if (objectTypeData.requiresGroundPlacement) {
-                    // For ground-placed objects (e.g., Rock3): only rotate around Y-axis
-                    this.previewRotation.y += event.movementX * this.rotationSensitivity;
-                    // Ignore vertical mouse movement (no X-axis rotation)
-                } else {
-                    // For regular objects: use Y and X axes
-                    this.previewRotation.y += event.movementX * this.rotationSensitivity;
-                    this.previewRotation.x += event.movementY * this.rotationSensitivity;
-                }
-
-                this.previewObject.rotation.copy(this.previewRotation);
+            if (this.selectedShape === 'spotlight') {
+                // For spotlight/cone: use Z and X axes instead of Y and X
+                // Mouse X controls Z-axis (sideways tilt)
+                // Mouse Y controls X-axis (forward/backward tilt)
+                this.previewRotation.z += event.movementX * this.rotationSensitivity;
+                this.previewRotation.x += event.movementY * this.rotationSensitivity;
+            } else if (objectTypeData.requiresGroundPlacement) {
+                // For ground-placed objects (e.g., Rock3): only rotate around Y-axis
+                this.previewRotation.y += event.movementX * this.rotationSensitivity;
+                // Ignore vertical mouse movement (no X-axis rotation)
             } else {
-                this.updatePreviewPosition();
+                // For regular objects: use Y and X axes
+                this.previewRotation.y += event.movementX * this.rotationSensitivity;
+                this.previewRotation.x += event.movementY * this.rotationSensitivity;
             }
+
+            this.previewObject.rotation.copy(this.previewRotation);
+        } else {
+            this.updatePreviewPosition();
         }
+    }
 
     onMouseClick(event) {
         // Ignore clicks that just selected an object
@@ -537,12 +457,6 @@ export class ObjectManager {
         if (event.button === 0) { // Left click - place object
             if (!this.buildMode || !this.previewObject) return;
 
-            // COLLISION DETECTION DISABLED FOR TESTING
-            // const hasCollision = this.checkCollision(this.previewObject.position);
-            // if (hasCollision) {
-            //     console.log('Cannot place object here - collision detected!');
-            //     return;
-            // }
             this.placeObject();
         } else if (event.button === 2) { // Right click - toggle rotation mode
             event.preventDefault();
@@ -951,15 +865,6 @@ export class ObjectManager {
         }
 
         this.exitBuildMode();
-    }
-
-    /**
-     * Get object attributes for collision detection (for Fish.js)
-     * @param {THREE.Object3D} object - The collided object
-     * @returns {PlaceableObject|null} Object attributes or null
-     */
-    getObjectAttributes(object) {
-        return getObjectAttributes(object);
     }
 
     update() {
