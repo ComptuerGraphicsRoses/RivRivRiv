@@ -1078,6 +1078,12 @@ export class ObjectManager {
             }
         });
 
+        if (spotlights[0].visible) {
+            this.sceneManager.lights.spotlight = spotlights[0];
+        } else {
+            this.sceneManager.lights.spotlight = null;
+        }
+
         const status = spotlights[0].visible ? 'ON' : 'OFF';
         console.log(`💡 ${spotlights.length} spotlight(s) toggled ${status}`);
         return true;
