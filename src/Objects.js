@@ -12,6 +12,7 @@ export class ObjectManager {
         this.camera = camera;
         this.canvas = canvas;
         this.sceneManager = sceneManager; // Reference to SceneManager for bait registration
+        this.gameState = null; // Reference to GameState for phase checking
 
         this.placedObjects = [];
         this.previewObject = null;
@@ -76,6 +77,12 @@ export class ObjectManager {
         // Validate shape parameter
         if (!shape) {
             console.error('toggleBuildModeWithShape called with invalid shape:', shape);
+            return false;
+        }
+
+        // Prevent build mode during simulation or evaluation phases
+        if (this.gameState && this.gameState.phase !== 'PREPARATION') {
+            console.log('Cannot place objects during simulation - press R to restart');
             return false;
         }
 
@@ -493,6 +500,11 @@ export class ObjectManager {
     onCanvasClick(event) {
         // Only handle selection when NOT in build mode
         if (this.buildMode) return;
+
+        // Only allow selecting objects in preparation phase
+        if (this.gameState && this.gameState.phase !== 'PREPARATION') {
+            return; // Ignore clicks during simulation
+        }
 
         // Raycast from center of screen (0, 0 in normalized device coordinates)
         // This selects whatever object is at the center crosshair, not where mouse clicks
