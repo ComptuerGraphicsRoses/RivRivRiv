@@ -8,7 +8,7 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { Fish } from './Fish.js';
 import { FlockingSystem } from './FlockingSystem.js';
 import { GroundedSkybox } from 'three/addons/objects/GroundedSkybox.js';
-
+import Predator from './Predator.js';
 export class SceneManager {
     constructor() {
         this.scene = new THREE.Scene();
@@ -53,7 +53,7 @@ export class SceneManager {
         //this.createTestScene();
 
         this.createGroundPlane();
-
+        this.spawnPredator(new THREE.Vector3(0, 3, 0));
         // Create team names scene (in separate area)
         this.createTeamNamesScene();
     }
@@ -620,6 +620,32 @@ export class SceneManager {
         return obstacle;
     }
 
+    spawnPredator = (position = new THREE.Vector3(0, 2, 0)) => {
+    const predator = new Predator(position);
+
+    // 🦈 Mesh
+    const geometry = new THREE.ConeGeometry(0.4, 1.5, 12);
+    geometry.rotateX(-Math.PI / 2);
+
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x888888,
+        roughness: 0.4,
+        metalness: 0.6
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.position.copy(position);
+
+    predator.mesh = mesh;
+
+    this.scene.add(mesh);
+    this.predators.push(predator);
+
+    console.log('✓ Predator spawned');
+    }
+
+
     updateShader = (shaderManager) => {
         // This will be used to switch materials when shader changes
         // For now using standard materials, will integrate custom shaders later
@@ -641,5 +667,21 @@ export class SceneManager {
             const scale = 1.0 + Math.sin(time * 3) * 0.2;
             this.bait.scale.setScalar(scale);
         }
+
+        // 🦈 Update predators
+        this.predators.forEach(predator => {
+            predator.update(deltaTime, this.fish);
+
+            if (predator.mesh) {
+                predator.mesh.position.copy(predator.position);
+
+                // Yöne bakma (çok iyi görünür)
+                if (predator.velocity.lengthSq() > 0.0001) {
+                    const lookTarget = predator.position.clone().add(predator.velocity);
+                    predator.mesh.lookAt(lookTarget);
+                }
+            }
+        });
+
     }
 }
