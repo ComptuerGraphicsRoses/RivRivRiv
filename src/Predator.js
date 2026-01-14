@@ -4,6 +4,7 @@ import {
     BOUNDARY_MIN_Y,
     BOUNDARY_MAX_Y,
     BOUNDARY_HALF_Z,
+    GAME_SCALE,
 } from "./FlockingSystem.js";
 
 import * as THREE from 'three';
@@ -19,7 +20,7 @@ export default class Predator {
         this.maxSpeed = 2;          // balıktan hızlı
         this.maxForce = 0.15;
 
-        this.detectionRadius = 10.0;  // metre
+        this.detectionRadius = 20.0 * GAME_SCALE;  // metre
         this.captureRadius = 0.6;     // yakalama mesafesi
 
         this.wanderAngle = 0;

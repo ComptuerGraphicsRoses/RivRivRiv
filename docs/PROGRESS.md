@@ -20,10 +20,10 @@
   - `shaders/phong.frag.glsl`
   - `shaders/underwater.vert.glsl`
   - `shaders/underwater.frag.glsl`
-- [ ] **2+ shader programs** - Phong (realistic) + Underwater (stylized NPR)
-  - [ ] Çalışmıyor
-  - [ ] **Runtime shader switching** - Keys `1` and `2` switch between shaders
-  - [ ] Çalışmıyor
+- [x] **2+ shader programs** - Phong (realistic) + Underwater (stylized NPR)
+  - [x] Çalışmıyor
+  - [x] **Runtime shader switching** - Keys `1` and `2` switch between shaders
+  - [x] Çalışmıyor
 - [x] **Help menu** - `H` key toggles detailed help overlay
 - [x] **Scoring system framework** - Point tracking with penalties implemented
 
@@ -40,8 +40,8 @@
 ---
 ### BUGS
 
-- [ BUG ] Shaders doesn't work (or change, normal view is ok but underwater shader doesnt work when I press 2)
-- [ BUG ] Help menu appears but top of it is cut off, we can not see everything
+- [x] Shaders doesn't work (or change, normal view is ok but underwater shader doesnt work when I press 2)
+- [x] Help menu appears but top of it is cut off, we can not see everything
 
 ---
 
@@ -56,31 +56,31 @@
   - [ ] FleeBehavior ekle köpek balığından kaçsınlar
 
 - [x] **Fish school (100+ entities)** - InstancedMesh for performance
-  - Fish entity class with position/velocity/acceleration
-  - Efficient neighbor detection (spatial partitioning)
-  - Render 100+ fish at 60 FPS
+  - [x] Fish entity class with position/velocity/acceleration
+  - [x] Efficient neighbor detection (spatial partitioning)
+  - [x] Render 100+ fish at 60 FPS
 
-- [ ] **Predator AI (shark)** - Simple pursuit behavior
-  - Prey detection radius
-  - Steering toward nearest fish
-  - Kill radius for collision detection
+- [x] **Predator AI (shark)** - Simple pursuit behavior
+  - [x] Prey detection radius
+  - [x] Steering toward nearest fish
+  - [x] Kill radius for collision detection
 
 #### Interactive Objects
 - [ ] **Placeable objects system**
   - [x] Rock - Static obstacle (fish avoid)
-    - [ ] Taşın rengi yok
-  - [ ] SpikedRock - Lethal obstacle (fish die on contact)
-    - [ ] 3d model eksik (Dursun veya Sinan)
-    - [ ] 3d boundry model eksik (Dursun veya Sinan)
-    - [ ] Balık ölme kodlanmalı
-  - [ ] Huge Rock - Devasa olan işte şittirmeyn beni
-    - [ ] 3d model eksik (Dursun veya Sinan)
-    - [ ] 3d boundry model eksik (Dursun veya Sinan)
-    - [ ] Balık ölme kodlanmalı
+    - [x] Taşın rengi yok
+  - [x] SpikedRock - Lethal obstacle (fish die on contact)
+    - [x] 3d model eksik (Dursun veya Sinan)
+    - [x] 3d boundry model eksik (Dursun veya Sinan)
+    - [x] Balık ölme kodlanmalı
+  - [x] Huge Rock - Devasa olan işte şittirmeyn beni
+    - [x] 3d model eksik (Dursun veya Sinan)
+    - [x] 3d boundry model eksik (Dursun veya Sinan)
+    - [x] Balık ölme kodlanmalı
   - [x] Bait - Attraction point (goal seeking)
     - [ ] 10 balık değince yok olsun tek balık değil (opsiyonel)
-    - [ ] Yem bittiğinde final noktasına gitmeleri gerek (yenilemeyen bait veya direk final noktası gibi bi şey koyalım)
-    - [ ] Final noktası kontrolü distance ile yapılabilir
+    - [x] Yem bittiğinde final noktasına gitmeleri gerek (yenilemeyen bait veya direk final noktası gibi bi şey koyalım)
+    - [x] Final noktası kontrolü distance ile yapılabilir
   - [x] (Spotlight already exists for lighting)
 
 - [x] **Spotlight UI controls** - Must meet BBM 412 requirements
@@ -89,35 +89,33 @@
   - [x] Intensity slider (0.0 - 10.0)
   - [x] On/Off toggle
 
-- [ ] **Object transformation controls** - For at least 3 objects
+- [x] **Object transformation controls** - For at least 3 objects
   - [x] Click-to-select mechanism (envanterde var)
-    - [ ] (kaya koyunca geri alamıyoz bug var, en son çözeriz)
+    - [x] (kaya koyunca geri alamıyoz bug var, en son çözeriz)
   - [x] Position (X, Y, Z)
   - [x] Rotation (X, Y, Z)
 
 #### Game Systems
-- [ ] **Level system**
+- [x] **Level system**
   - [x] Inventory management (preparation phase)
-  - [ ] Spawn zones and goal zones
-  - [ ] AABB collision ekle
-  - [ ] Balıkların belli bi yükseklikten yukarı ve zeminden aşağı gitmesini engelleyeceğiz
-- [ ] **Win/lose evaluation**
-  - [ ] Survival percentage calculation
-  - [ ] Timer enforcement (20 seconds)
-  - [ ] Victory condition: ≥60% fish reach goal
+  - [x] Spawn zones and goal zones
+  - [x] AABB collision ekle
+  - [x] Balıkların belli bi yükseklikten yukarı ve zeminden aşağı gitmesini engelleyeceğiz
+- [x] **Win/lose evaluation**
+  - [x] Survival percentage calculation
+  - [x] Timer enforcement (20 seconds)
+  - [x] Victory condition: ≥60% fish reach goal
   - [ ] Score bonus on win (+50 points)
 
-- [ ] **Complete scoring integration**
-  - [ ] Fish death penalty (-10 points)
-  - [ ] Time penalty (-0.5 points/second)
-  - [ ] Real-time HUD updates
-  - [ ] Final score screen
+- [x] **Complete scoring integration**
+  - [x] Fish death penalty (-10 points)
+  - [x] Time penalty (-0.5 points/second)
+  - [x] Real-time HUD updates
+  - [x] Final score screen
 
-- [ ] Game Loop Programlanacak
-  - [ ] Envanterdeki her şey koyulduğunda tuşa basınca simülasyon başlaması
-  - [ ] End screen
-  - [ ] Pause screen
-  - [ ] Falan filan
+- [x] Game Loop Programlanacak
+  - [x] Envanterdeki her şey koyulduğunda tuşa basınca simülasyon başlaması
+  - [x] End screen
 ---
 
 ## Known Issues
@@ -129,7 +127,6 @@
 
 ## Fikirler
 
-- [ ] Balıkları takip eden spotlight eklenebilir (kullanıcının eklediğine ek olarak)
 
 - [x] Boid simülasyonu değerlerini fine tune edip balık sürüsü gibi olmasını sağlama
 
@@ -138,6 +135,8 @@
   - [x] Balıklar sınırları aşamayacak
   - [x] Köpek balığı sınırları aşamayacak
 
+- [x] item yerleştirme bug'ını çözmek
+
 - [ ] Balıkların köpek balığından kaçmasını yapcam
 - [ ] Köpek balığının obstacle avoidance'ı eklenecek
-- [x] item yerleştirme bug'ını çözmek
+- [ ] Yemleri duvarın dışına koyabiliyoruz, kötü

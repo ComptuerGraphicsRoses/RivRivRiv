@@ -477,6 +477,11 @@ class FlockingFrenzy {
                 }
                 break;
 
+            case 'v':
+                // Toggle debug view (boundaries/obstacles)
+                this.sceneManager.toggleDebugView();
+                break;
+
             case 'n':
                 // Next level (only in EVALUATION phase after winning) or view team names
                 if (this.gameState.phase === 'EVALUATION') {
