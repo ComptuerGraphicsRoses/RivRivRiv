@@ -12,13 +12,15 @@ export class ShaderManager {
                 vertex: null,
                 fragment: null,
                 material: null,
-                uniforms: null
+                uniforms: null,
+                materials: [] // Track all created materials for this shader
             },
             toon: {
                 vertex: null,
                 fragment: null,
                 material: null,
-                uniforms: null
+                uniforms: null,
+                materials: [] // Track all created materials for this shader
             }
         };
 
@@ -77,7 +79,7 @@ export class ShaderManager {
             spotLightIntensity: { value: 2.0 },
             spotLightAngle: { value: Math.PI / 6 },
             spotLightPenumbra: { value: 0.2 },
-            spotLightEnabled: { value: true },
+            spotLightEnabled: { value: false },
 
             // Material properties
             materialColor: { value: new THREE.Color(0xffffff) },
@@ -106,10 +108,11 @@ export class ShaderManager {
             spotLightIntensity: { value: 2.0 },
             spotLightAngle: { value: Math.PI / 6 },
             spotLightPenumbra: { value: 0.2 },
-            spotLightEnabled: { value: true },
+            spotLightEnabled: { value: false },
 
             // Material properties
             materialColor: { value: new THREE.Color(0xffffff) },
+            materialShininess: { value: 4.0 },
 
             // Toon shading parameters
             toonLevels: { value: 4.0 },
@@ -166,83 +169,88 @@ export class ShaderManager {
             uniforms.hasTexture.value = true;
         }
 
-        return new THREE.ShaderMaterial({
+        const material = new THREE.ShaderMaterial({
             vertexShader: shader.vertex,
             fragmentShader: shader.fragment,
             uniforms: uniforms,
             side: THREE.DoubleSide
         });
+
+        // Track this material so we can update its uniforms later
+        shader.materials.push(material);
+
+        return material;
     }
 
     updateUniforms = (camera, lights, deltaTime) => {
         this.time += deltaTime;
 
-        // Update Phong shader uniforms
-        if (this.shaders.phong.uniforms) {
-            // Sync ambient light color and intensity
+        // Helper function to update uniforms for a shader and all its materials
+        const updateShaderUniforms = (shader, lights) => {
+            if (!shader.uniforms) return;
+
+            // Prepare uniform updates
+            const updates = {};
+
+            // Sync ambient light
             if (lights.ambient) {
-                this.shaders.phong.uniforms.ambientColor.value.copy(lights.ambient.color);
-                this.shaders.phong.uniforms.ambientIntensity.value = lights.ambient.intensity;
+                updates.ambientColor = lights.ambient.color;
+                updates.ambientIntensity = lights.ambient.intensity;
             }
 
             // Sync directional light
             if (lights.directional) {
-                this.shaders.phong.uniforms.directionalLightDir.value.copy(
-                    lights.directional.position
-                ).normalize();
-                this.shaders.phong.uniforms.directionalLightColor.value.copy(lights.directional.color);
-                this.shaders.phong.uniforms.directionalLightIntensity.value = lights.directional.intensity;
+                updates.directionalLightDir = lights.directional.position.clone().normalize();
+                updates.directionalLightColor = lights.directional.color;
+                updates.directionalLightIntensity = lights.directional.intensity;
             }
 
             // Sync spotlight
             if (lights.spotlight) {
-                this.shaders.phong.uniforms.spotLightPosition.value.copy(
-                    lights.spotlight.position
-                );
-                this.shaders.phong.uniforms.spotLightColor.value.copy(lights.spotlight.color);
-                this.shaders.phong.uniforms.spotLightIntensity.value = lights.spotlight.intensity;
+                updates.spotLightEnabled = true;
+                updates.spotLightPosition = lights.spotlight.position;
+                updates.spotLightColor = lights.spotlight.color;
+                updates.spotLightIntensity = lights.spotlight.intensity;
 
                 const targetDir = new THREE.Vector3();
                 targetDir.subVectors(
                     lights.spotlight.target.position,
                     lights.spotlight.position
                 ).normalize();
-                this.shaders.phong.uniforms.spotLightDirection.value.copy(targetDir);
-            }
-        }
-
-        // Update Toon shader uniforms
-        if (this.shaders.toon.uniforms) {
-            // Sync ambient light color and intensity
-            if (lights.ambient) {
-                this.shaders.toon.uniforms.ambientColor.value.copy(lights.ambient.color);
-                this.shaders.toon.uniforms.ambientIntensity.value = lights.ambient.intensity;
+                updates.spotLightDirection = targetDir;
             }
 
-            // Sync directional light
-            if (lights.directional) {
-                this.shaders.toon.uniforms.directionalLightDir.value.copy(
-                    lights.directional.position
-                ).normalize();
-                this.shaders.toon.uniforms.directionalLightColor.value.copy(lights.directional.color);
-                this.shaders.toon.uniforms.directionalLightIntensity.value = lights.directional.intensity;
+            // Apply updates to base uniforms
+            for (const [key, value] of Object.entries(updates)) {
+                if (shader.uniforms[key]) {
+                    if (value instanceof THREE.Color || value instanceof THREE.Vector3) {
+                        shader.uniforms[key].value.copy(value);
+                    } else {
+                        shader.uniforms[key].value = value;
+                    }
+                }
             }
 
-            // Sync spotlight
-            if (lights.spotlight) {
-                this.shaders.toon.uniforms.spotLightPosition.value.copy(
-                    lights.spotlight.position
-                );
-                this.shaders.toon.uniforms.spotLightColor.value.copy(lights.spotlight.color);
-                this.shaders.toon.uniforms.spotLightIntensity.value = lights.spotlight.intensity;
+            // Apply updates to all tracked materials
+            shader.materials.forEach(material => {
+                if (!material.uniforms) return;
 
-                const targetDir = new THREE.Vector3();
-                targetDir.subVectors(
-                    lights.spotlight.target.position,
-                    lights.spotlight.position
-                ).normalize();
-                this.shaders.toon.uniforms.spotLightDirection.value.copy(targetDir);
-            }
-        }
+                for (const [key, value] of Object.entries(updates)) {
+                    if (material.uniforms[key]) {
+                        if (value instanceof THREE.Color || value instanceof THREE.Vector3) {
+                            material.uniforms[key].value.copy(value);
+                        } else {
+                            material.uniforms[key].value = value;
+                        }
+                    }
+                }
+            });
+        };
+
+        // Update Phong shader and all its materials
+        updateShaderUniforms(this.shaders.phong, lights);
+
+        // Update Toon shader and all its materials
+        updateShaderUniforms(this.shaders.toon, lights);
     }
 }

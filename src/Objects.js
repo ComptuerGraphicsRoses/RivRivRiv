@@ -768,6 +768,8 @@ export class ObjectManager {
             this.scene.add(spotlight);
             this.scene.add(spotlight.target);
 
+            this.sceneManager.lights.spotlight = spotlight;
+
             // Create a visual indicator (cone mesh) - non-collidable
             const visualCone = new THREE.Mesh(
                 new THREE.ConeGeometry(0.5, 1.5, 8),

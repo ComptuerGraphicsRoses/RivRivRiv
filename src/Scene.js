@@ -475,32 +475,35 @@ export class SceneManager {
 
     setupLights = () => {
         // Ambient light
-        this.lights.ambient = new THREE.AmbientLight(0x7296DD, 1.5);
+        this.lights.ambient = new THREE.AmbientLight(0x7296DD, 1.0);
         this.scene.add(this.lights.ambient);
 
         // Directional light (sun)
         this.lights.directional = new THREE.DirectionalLight(0xffffff, 1.0);
         this.lights.directional.position.set(5, 10, 5);
+        this.lights.directional.target.position.set(0, 0, 0);
         this.lights.directional.castShadow = true;
         this.scene.add(this.lights.directional);
+        const helper = new THREE.DirectionalLightHelper(this.lights.directional, 5);
 
+        this.scene.add(helper);
         // Spotlight (BBM 412 requirement)
-        this.lights.spotlight = new THREE.SpotLight(0xffffff, 2.0);
-        this.lights.spotlight.position.set(0, 10, 0);
-        this.lights.spotlight.angle = Math.PI / 6;
-        this.lights.spotlight.penumbra = 0.2;
-        this.lights.spotlight.decay = 2;
-        this.lights.spotlight.distance = 50;
-        this.lights.spotlight.castShadow = true;
+        // this.lights.spotlight = new THREE.SpotLight(0xffffff, 2.0);
+        // this.lights.spotlight.position.set(0, 10, 0);
+        // this.lights.spotlight.angle = Math.PI / 6;
+        // this.lights.spotlight.penumbra = 0.2;
+        // this.lights.spotlight.decay = 2;
+        // this.lights.spotlight.distance = 50;
+        // this.lights.spotlight.castShadow = true;
 
-        // Spotlight target
-        this.lights.spotlight.target.position.set(0, 0, 0);
-        this.scene.add(this.lights.spotlight);
-        this.scene.add(this.lights.spotlight.target);
+        // // Spotlight target
+        // this.lights.spotlight.target.position.set(0, 0, 0);
+        // this.scene.add(this.lights.spotlight);
+        // this.scene.add(this.lights.spotlight.target);
 
-        // Helper for spotlight (for debugging)
-        const spotLightHelper = new THREE.SpotLightHelper(this.lights.spotlight);
-        this.scene.add(spotLightHelper);
+        // // Helper for spotlight (for debugging)
+        // const spotLightHelper = new THREE.SpotLightHelper(this.lights.spotlight);
+        // this.scene.add(spotLightHelper);
     }
 
     createTestScene = () => {
