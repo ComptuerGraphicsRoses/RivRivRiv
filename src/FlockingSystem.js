@@ -11,12 +11,13 @@ export class FlockingSystem {
         this.obstacles = [];
         this.baits = []; // Track multiple baits instead of single position
 
-        // Behavior weights (tunable)
-        this.separationWeight = 1.5;
-        this.alignmentWeight = 1.0;
-        this.cohesionWeight = 1.0;
-        this.seekWeight = 0.8;
-        this.obstacleAvoidanceWeight = 5.0;  // Balanced weight
+        // Behavior weights - based on boids-js-master working values
+        // These are tuned to work with normalized forces
+        this.separationWeight = 30.0;      // Strong separation to avoid crowding
+        this.alignmentWeight = 2.0;        // Match neighbors' direction
+        this.cohesionWeight = 4.0;         // Stay together as a group
+        this.seekWeight = 3.0;             // Move towards bait
+        this.obstacleAvoidanceWeight = 100.0;  // Very strong to avoid obstacles
         
         // Obstacle avoidance parameters
         this.detectionBoxMinLength = 5.0;  // Increased for earlier detection
@@ -231,23 +232,27 @@ export class FlockingSystem {
     
     /**
      * SEPARATION: Steer to avoid crowding neighbors
-     * Based on Yuka's SeparationBehavior
+     * Based on boids-js-master implementation with quadratic distance falloff
      */
     calculateSeparation(fish) {
         const force = new THREE.Vector3();
+        
+        if (fish.neighbors.length === 0) return force;
         
         for (const neighbor of fish.neighbors) {
             const toAgent = new THREE.Vector3().subVectors(fish.position, neighbor.position);
             let distance = toAgent.length();
             
             // Avoid division by zero
-            if (distance === 0) distance = 0.0001;
+            if (distance <= 0.01) distance = 0.01;
             
             // Only separate if too close
             if (distance < fish.separationRadius) {
-                // Force is inversely proportional to distance
-                toAgent.normalize().divideScalar(distance);
-                force.add(toAgent);
+                // Quadratic falloff: (direction/distance)/distance
+                // This makes closer neighbors have MUCH stronger repulsion
+                const normalizedDir = toAgent.clone().normalize();
+                const weightedForce = normalizedDir.multiplyScalar(1.0 / (distance * distance));
+                force.add(weightedForce);
             }
         }
         
@@ -256,32 +261,35 @@ export class FlockingSystem {
     
     /**
      * ALIGNMENT: Steer towards average heading of neighbors
-     * Based on Yuka's AlignmentBehavior
+     * Based on boids-js-master - use normalized average velocity
      */
     calculateAlignment(fish) {
         const force = new THREE.Vector3();
         
         if (fish.neighbors.length === 0) return force;
         
-        const averageDirection = new THREE.Vector3();
+        const averageVelocity = new THREE.Vector3();
         
+        // Sum up all neighbor velocities
         for (const neighbor of fish.neighbors) {
-            const neighborDir = neighbor.getDirection();
-            averageDirection.add(neighborDir);
+            averageVelocity.add(neighbor.velocity);
         }
         
-        averageDirection.divideScalar(fish.neighbors.length);
+        // Get the average
+        averageVelocity.divideScalar(fish.neighbors.length);
         
-        // Calculate force to align with average direction
-        const currentDir = fish.getDirection();
-        force.subVectors(averageDirection, currentDir);
+        // Normalize to get direction
+        const avgLength = averageVelocity.length();
+        if (avgLength > 0) {
+            averageVelocity.normalize();
+        }
         
-        return force;
+        return averageVelocity;
     }
     
     /**
      * COHESION: Steer towards average position of neighbors  
-     * Based on Yuka's CohesionBehavior
+     * Based on boids-js-master implementation
      */
     calculateCohesion(fish) {
         const force = new THREE.Vector3();
@@ -290,21 +298,23 @@ export class FlockingSystem {
         
         const centerOfMass = new THREE.Vector3();
         
+        // Calculate average position of neighbors
         for (const neighbor of fish.neighbors) {
             centerOfMass.add(neighbor.position);
         }
         
         centerOfMass.divideScalar(fish.neighbors.length);
         
-        // Seek towards center of mass
-        const cohesionForce = this.calculateSeek(fish, centerOfMass);
+        // Direction towards center of mass
+        force.subVectors(centerOfMass, fish.position);
         
-        // Normalize (cohesion is usually stronger than other forces)
-        if (cohesionForce.lengthSq() > 0) {
-            cohesionForce.normalize();
+        // Normalize the direction
+        const length = force.length();
+        if (length > 0) {
+            force.normalize();
         }
         
-        return cohesionForce;
+        return force;
     }
     
     /**
