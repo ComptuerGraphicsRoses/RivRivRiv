@@ -21,7 +21,7 @@ export class SceneManager {
     constructor() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x158DA0); // Deep water color
-        this.scene.fog = new THREE.Fog(0x158DA0, 0, 20);
+        this.scene.fog = new THREE.Fog(0x158DA0, 0, 20 * GAME_SCALE);
 
         this.lights = {
             directional: null,

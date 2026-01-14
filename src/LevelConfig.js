@@ -3,6 +3,7 @@
  * Defines fish spawn positions, quantities, goal zones, and inventory per level
  */
 
+import { GAME_SCALE } from "./FlockingSystem.js";
 import * as THREE from 'three';
 
 /**
@@ -18,11 +19,11 @@ export const LEVEL_CONFIGS = {
         name: "Level 1 - Introduction",
         fishConfig: {
             count: 50,
-            spawnPosition: new THREE.Vector3(8, 3, 8),
-            spawnSpread: new THREE.Vector3(2, 2, 2) // Random spread in x, y, z
+            spawnPosition: new THREE.Vector3(8, 3, 8).multiplyScalar(GAME_SCALE),
+            spawnSpread: new THREE.Vector3(2, 2, 2).multiplyScalar(GAME_SCALE) // Random spread in x, y, z
         },
         goalConfig: {
-            position: new THREE.Vector3(-8, 3, -8),
+            position: new THREE.Vector3(-8, 3, -8).multiplyScalar(GAME_SCALE),
             radius: 2.5,
             color: 0x00ff00 // Green
         },
@@ -46,11 +47,11 @@ export const LEVEL_CONFIGS = {
         name: "Level 2 - Advanced",
         fishConfig: {
             count: 80,
-            spawnPosition: new THREE.Vector3(-15, 2, -5),
-            spawnSpread: new THREE.Vector3(6, 3, 6)
+            spawnPosition: new THREE.Vector3(-15, 2, -5).multiplyScalar(GAME_SCALE),
+            spawnSpread: new THREE.Vector3(6, 3, 6).multiplyScalar(GAME_SCALE)
         },
         goalConfig: {
-            position: new THREE.Vector3(20, 3, 5),
+            position: new THREE.Vector3(20, 3, 5).multiplyScalar(GAME_SCALE),
             radius: 2.0,
             color: 0x00ff00
         },
@@ -75,11 +76,11 @@ export const LEVEL_CONFIGS = {
         name: "Level 3 - Expert",
         fishConfig: {
             count: 100,
-            spawnPosition: new THREE.Vector3(-20, 2, 0),
-            spawnSpread: new THREE.Vector3(8, 3, 8)
+            spawnPosition: new THREE.Vector3(-20, 2, 0).multiplyScalar(GAME_SCALE),
+            spawnSpread: new THREE.Vector3(8, 3, 8).multiplyScalar(GAME_SCALE)
         },
         goalConfig: {
-            position: new THREE.Vector3(25, 3, 0),
+            position: new THREE.Vector3(25, 3, 0).multiplyScalar(GAME_SCALE),
             radius: 1.8,
             color: 0x00ff00
         },
