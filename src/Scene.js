@@ -32,6 +32,8 @@ export class SceneManager {
         this.objects = [];
         this.fish = [];
         this.predators = [];
+        this.goalZones = []; // Goal zones for fish to reach
+        this.spawnZones = []; // Fish spawn zones for visualization
 
         // Flocking system
         this.flockingSystem = new FlockingSystem();
@@ -62,7 +64,6 @@ export class SceneManager {
 
         this.createGroundPlane();
         this.createBoundaryVisualization();  // Show fish boundary area
-        this.spawnPredator(new THREE.Vector3(0, 3, 0));
         // Create team names scene (in separate area)
         this.createTeamNamesScene();
     }
@@ -505,8 +506,11 @@ export class SceneManager {
 
     /**
      * Spawn a school of fish
+     * @param {number} count - Number of fish to spawn
+     * @param {THREE.Vector3} spawnPosition - Center position for spawning
+     * @param {THREE.Vector3} spawnSpread - Random spread area (x, y, z)
      */
-    spawnFishSchool = (count = 50) => {
+    spawnFishSchool = (count = 50, spawnPosition = new THREE.Vector3(0, 2, 0), spawnSpread = new THREE.Vector3(5, 2, 5)) => {
         const fishGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
         fishGeometry.rotateX(Math.PI * -0.5); // Point forward
 
@@ -522,11 +526,11 @@ export class SceneManager {
             // Create fish entity
             const fish = new Fish();
 
-            // Random spawn position (in a cluster)
+            // Random spawn position within spread area
             fish.position.set(
-                -5 + Math.random() * 10,
-                2 + Math.random() * 3,
-                -5 + Math.random() * 10
+                spawnPosition.x + (Math.random() - 0.5) * spawnSpread.x,
+                spawnPosition.y + (Math.random() - 0.5) * spawnSpread.y,
+                spawnPosition.z + (Math.random() - 0.5) * spawnSpread.z
             );
 
             // Random initial velocity
@@ -547,7 +551,7 @@ export class SceneManager {
             this.fish.push(fish);
         }
 
-        console.log(`✓ Spawned ${count} fish`);
+        console.log(`✓ Spawned ${count} fish at (${spawnPosition.x.toFixed(2)}, ${spawnPosition.y.toFixed(2)}, ${spawnPosition.z.toFixed(2)})`);
     }
 
     /**
@@ -694,6 +698,200 @@ export class SceneManager {
     console.log('✓ Predator spawned');
     }
 
+    /**
+     * Create a goal zone where fish need to reach
+     * @param {THREE.Vector3} position - Goal zone center position
+     * @param {number} radius - Goal zone radius
+     * @param {number} color - Goal zone color (hex)
+     * @returns {Object} Goal zone object with mesh and parameters
+     */
+    createGoalZone = (position, radius = 2.5, color = 0x00ff00) => {
+        const geometry = new THREE.SphereGeometry(radius, 32, 32);
+        const material = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.3,
+            wireframe: false
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.copy(position);
+        this.scene.add(mesh);
+
+        // Add wireframe overlay for better visibility
+        const wireframeGeometry = new THREE.SphereGeometry(radius, 16, 16);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: color,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.6
+        });
+        const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+        wireframeMesh.position.copy(position);
+        this.scene.add(wireframeMesh);
+
+        const goalZone = {
+            position: position.clone(),
+            radius: radius,
+            mesh: mesh,
+            wireframeMesh: wireframeMesh
+        };
+
+        this.goalZones.push(goalZone);
+
+        console.log(`✓ Created goal zone at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}) with radius ${radius}`);
+
+        return goalZone;
+    }
+
+    /**
+     * Check if fish have reached goal zones and mark them
+     * @param {Function} onFishReachGoal - Callback when fish reaches goal
+     */
+    checkFishReachGoal = (onFishReachGoal) => {
+        if (this.goalZones.length === 0) return;
+
+        for (const fish of this.fish) {
+            // Skip fish that are dead or already reached goal
+            if (!fish.alive || fish.reachedGoal) continue;
+
+            // Check against all goal zones
+            for (const goalZone of this.goalZones) {
+                const distance = fish.position.distanceTo(goalZone.position);
+
+                if (distance <= goalZone.radius) {
+                    // Mark fish as reached goal
+                    fish.reachedGoal = true;
+
+                    // Hide fish mesh for performance
+                    if (fish.mesh) {
+                        fish.mesh.visible = false;
+                    }
+
+                    // Notify game state
+                    if (onFishReachGoal) {
+                        onFishReachGoal();
+                    }
+
+                    console.log(`🐟 Fish reached goal! (${this.fish.filter(f => f.reachedGoal).length} total)`);
+
+                    break; // Fish reached a goal, no need to check other zones
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear all goal zones
+     */
+    clearGoalZones = () => {
+        for (const goalZone of this.goalZones) {
+            if (goalZone.mesh) {
+                this.scene.remove(goalZone.mesh);
+                if (goalZone.mesh.geometry) goalZone.mesh.geometry.dispose();
+                if (goalZone.mesh.material) goalZone.mesh.material.dispose();
+            }
+            if (goalZone.wireframeMesh) {
+                this.scene.remove(goalZone.wireframeMesh);
+                if (goalZone.wireframeMesh.geometry) goalZone.wireframeMesh.geometry.dispose();
+                if (goalZone.wireframeMesh.material) goalZone.wireframeMesh.material.dispose();
+            }
+        }
+        this.goalZones = [];
+        console.log('✓ Goal zones cleared');
+    }
+
+    /**
+     * Create a spawn zone visualization where fish will spawn
+     */
+    createSpawnZone = (position, spread, color = 0xff9900) => {
+        const geometry = new THREE.BoxGeometry(spread.x * 2, spread.y * 2, spread.z * 2);
+        const material = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.2,
+            wireframe: false
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.copy(position);
+        this.scene.add(mesh);
+
+        const wireframeGeometry = new THREE.BoxGeometry(spread.x * 2, spread.y * 2, spread.z * 2);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: color,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.6
+        });
+        const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+        wireframeMesh.position.copy(position);
+        this.scene.add(wireframeMesh);
+
+        const spawnZone = {
+            position: position.clone(),
+            spread: spread.clone(),
+            mesh: mesh,
+            wireframeMesh: wireframeMesh
+        };
+
+        this.spawnZones.push(spawnZone);
+        console.log(`✓ Created spawn zone at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+
+        return spawnZone;
+    }
+
+    /**
+     * Clear all spawn zones
+     */
+    clearSpawnZones = () => {
+        for (const spawnZone of this.spawnZones) {
+            if (spawnZone.mesh) {
+                this.scene.remove(spawnZone.mesh);
+                if (spawnZone.mesh.geometry) spawnZone.mesh.geometry.dispose();
+                if (spawnZone.mesh.material) spawnZone.mesh.material.dispose();
+            }
+            if (spawnZone.wireframeMesh) {
+                this.scene.remove(spawnZone.wireframeMesh);
+                if (spawnZone.wireframeMesh.geometry) spawnZone.wireframeMesh.geometry.dispose();
+                if (spawnZone.wireframeMesh.material) spawnZone.wireframeMesh.material.dispose();
+            }
+        }
+        this.spawnZones = [];
+        console.log('✓ Spawn zones cleared');
+    }
+
+    /**
+     * Clear all fish from the scene
+     */
+    clearFish = () => {
+        for (const fish of this.fish) {
+            if (fish.mesh) {
+                this.scene.remove(fish.mesh);
+                if (fish.mesh.geometry) fish.mesh.geometry.dispose();
+                if (fish.mesh.material) fish.mesh.material.dispose();
+            }
+        }
+        this.fish = [];
+        this.flockingSystem.fish = [];
+        console.log('✓ Fish cleared');
+    }
+
+    /**
+     * Clear all predators from the scene
+     */
+    clearPredators = () => {
+        for (const predator of this.predators) {
+            if (predator.mesh) {
+                this.scene.remove(predator.mesh);
+                if (predator.mesh.geometry) predator.mesh.geometry.dispose();
+                if (predator.mesh.material) predator.mesh.material.dispose();
+            }
+        }
+        this.predators = [];
+        console.log('✓ Predators cleared');
+    }
+
 
     updateShader = (shaderManager) => {
         // This will be used to switch materials when shader changes
@@ -709,6 +907,11 @@ export class SceneManager {
 
         // Update flocking system
         this.flockingSystem.update(deltaTime);
+
+        // Check if fish reached goal zones (callback will be set by main.js)
+        if (this.onFishReachGoal) {
+            this.checkFishReachGoal(this.onFishReachGoal);
+        }
 
         // Animate bait (pulsing effect)
         if (this.bait) {

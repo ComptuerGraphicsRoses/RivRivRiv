@@ -55,6 +55,8 @@ export class Fish {
      */
     update(delta) {
         if (!this.alive) return;
+        // Skip physics if fish reached goal (performance optimization)
+        if (!this.alive || this.reachedGoal) return;
 
         // Limit acceleration
         if (this.acceleration.lengthSq() > this.maxForce * this.maxForce) {

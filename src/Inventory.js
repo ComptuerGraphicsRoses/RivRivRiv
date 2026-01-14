@@ -3,31 +3,13 @@
  * Manages level-based object placement limits
  */
 
-// Level inventory configurations (JSON-style data)
-// This can be easily moved to a separate JSON file later
-export const LEVEL_INVENTORIES = {
-    level1: {
-        rock1: 2,      // Small rocks
-        rock2: 1,      // Medium rocks
-        rock3: 1,      // Large rocks
-        bait: 10,       // Bait items
-        spotlight: 1   // Spotlights
-    },
-    level2: {
-        rock1: 3,
-        rock2: 2,
-        rock3: 1,
-        bait: 4,
-        spotlight: 2
-    },
-    level3: {
-        rock1: 4,
-        rock2: 3,
-        rock3: 2,
-        bait: 5,
-        spotlight: 2
-    }
-};
+import { LEVEL_CONFIGS } from './LevelConfig.js';
+
+// Convert level configs to inventory format
+export const LEVEL_INVENTORIES = {};
+for (const [levelId, config] of Object.entries(LEVEL_CONFIGS)) {
+    LEVEL_INVENTORIES[levelId] = config.inventory;
+}
 
 /**
  * InventoryManager - Tracks and validates object placement against level limits

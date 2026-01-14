@@ -8,6 +8,7 @@ import {
     BOUNDARY_MIN_Y,
     BOUNDARY_MAX_Y,
     BOUNDARY_HALF_Z,
+    GAME_SCALE,
 } from "./FlockingSystem.js";
 
 import * as THREE from 'three';
@@ -199,7 +200,7 @@ export class CameraController {
         
         // Clamp camera position to boundaries (same as fish boundaries)
         // Boundaries: X[-10,+10], Y[-0.5,5], Z[-10,+10]
-        const EXTRA_BUFFER_FOR_CAMERA_TO_NOT_GO_INSIDE_FLOOR = 1;
+        const EXTRA_BUFFER_FOR_CAMERA_TO_NOT_GO_INSIDE_FLOOR = 1 * GAME_SCALE;
         this.camera.position.x = Math.max(-BOUNDARY_HALF_X, Math.min(BOUNDARY_HALF_X, this.camera.position.x));
         this.camera.position.y = Math.max(BOUNDARY_MIN_Y + EXTRA_BUFFER_FOR_CAMERA_TO_NOT_GO_INSIDE_FLOOR, Math.min(BOUNDARY_MAX_Y, this.camera.position.y));
         this.camera.position.z = Math.max(-BOUNDARY_HALF_Z, Math.min(BOUNDARY_HALF_Z, this.camera.position.z));
