@@ -108,6 +108,9 @@ class FlockingFrenzy {
             this.gameState.setSceneManager(this.sceneManager);
             this.gameState.loadLevel(this.currentLevelConfig);
 
+            // Give ObjectManager reference to GameState for phase checking
+            this.objectManager.gameState = this.gameState;
+
             // Setup callback for when simulation starts
             this.gameState.onSimulationStart = this.onSimulationStart.bind(this);
 
@@ -217,6 +220,24 @@ class FlockingFrenzy {
     
     onKeyDown = (event) => {
         switch (event.key.toLowerCase()) {
+            case 'enter':
+                // Start simulation (only if in PREPARATION phase and all items placed)
+                if (this.gameState.phase === 'PREPARATION' && this.gameState.canStartGame()) {
+                    this.gameState.startSimulation();
+                    console.log('✓ Simulation started via Enter key');
+                } else if (this.gameState.phase === 'PREPARATION') {
+                    console.log('Cannot start: Place all inventory items first');
+                } else {
+                    console.log('Simulation already running');
+                }
+                break;
+
+            case 'r':
+                // Restart level (works in any phase)
+                this.gameState.restartLevel();
+                console.log('✓ Level restarted via R key');
+                break;
+
             case 'h':
                 // Toggle help menu
                 this.ui.toggleHelp();

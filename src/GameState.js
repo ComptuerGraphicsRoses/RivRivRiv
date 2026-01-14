@@ -167,7 +167,7 @@ export class GameState {
     
     onFishDeath = () => {
         this.fishAlive = Math.max(0, this.fishAlive - 1);
-        this.score -= 10;
+        this.score -= 2;
         this.score = Math.max(0, this.score);
     }
     
