@@ -51,6 +51,10 @@ export class SceneManager {
 
         // Store reference to shader manager
         this.shaderManager = null;
+
+        // Debug visualization
+        this.debugMeshes = [];
+        this.isDebugViewEnabled = false;
     }
 
     init = async (shaderManager) => {
@@ -619,7 +623,12 @@ export class SceneManager {
         
         const boundaryBox = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
         boundaryBox.position.set(0, centerY, 0);
+        
+        // Initial visibility based on debug flag
+        boundaryBox.visible = this.isDebugViewEnabled;
+        
         this.scene.add(boundaryBox);
+        this.debugMeshes.push(boundaryBox);
         
         console.log(`✓ Boundary visualization created: ${width}x${height}x${depth} at (0, ${centerY.toFixed(2)}, 0)`);
     }
@@ -807,8 +816,13 @@ export class SceneManager {
         this.flockingSystem.addObstacle(obstacle);
 
         // Add wireframe helper for extra visibility
-        // const wireframeMesh = this.showWireFrameObstacleSpheres(radius, position, scale, rotation);
-        const wireframeMesh = null;
+        // Add wireframe helper for extra visibility
+        const wireframeMesh = this.showWireFrameObstacleSpheres(radius, position, scale, rotation);
+        // Initial visibility based on debug flag
+        if (wireframeMesh) {
+            wireframeMesh.visible = this.isDebugViewEnabled;
+            this.debugMeshes.push(wireframeMesh);
+        }
         
         // Return both obstacle and wireframe for later removal
         return {
@@ -825,6 +839,8 @@ export class SceneManager {
         if (!boundaryData || !Array.isArray(boundaryData)) return;
 
         let removedCount = 0;
+        const meshesToRemove = new Set();
+
         for (const data of boundaryData) {
             if (data.obstacle) {
                 this.flockingSystem.removeObstacle(data.obstacle);
@@ -834,7 +850,13 @@ export class SceneManager {
                 this.scene.remove(data.wireframeMesh);
                 if (data.wireframeMesh.geometry) data.wireframeMesh.geometry.dispose();
                 if (data.wireframeMesh.material) data.wireframeMesh.material.dispose();
+                meshesToRemove.add(data.wireframeMesh);
             }
+        }
+
+        // Cleanup debugMeshes array
+        if (meshesToRemove.size > 0) {
+            this.debugMeshes = this.debugMeshes.filter(mesh => !meshesToRemove.has(mesh));
         }
 
         console.log(`✓ Removed ${removedCount} obstacle(s) from flocking system`);
@@ -1208,5 +1230,19 @@ export class SceneManager {
 
         console.log(`✓ Added obstacle at (${position.x}, ${position.y}, ${position.z}) with radius ${radius}`);
         return wireframeMesh;
+    }
+
+    /**
+     * Toggle debug view (wireframes, boundaries)
+     */
+    toggleDebugView = () => {
+        this.isDebugViewEnabled = !this.isDebugViewEnabled;
+        
+        this.debugMeshes.forEach(mesh => {
+            if (mesh) mesh.visible = this.isDebugViewEnabled;
+        });
+        
+        console.log(`Debug view ${this.isDebugViewEnabled ? 'enabled' : 'disabled'}`);
+        return this.isDebugViewEnabled;
     }
 }
