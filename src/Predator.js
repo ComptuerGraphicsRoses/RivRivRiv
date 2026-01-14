@@ -35,7 +35,7 @@ export default class Predator {
             const seekForce = this.seek(targetFish.position);
             this.applyForce(seekForce);
 
-            // this.tryToEat(targetFish);
+            this.tryToEat(targetFish);
         } else {
             // 🐾 Gezinme
             const wanderForce = this.wander();
