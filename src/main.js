@@ -10,6 +10,7 @@ import { ShaderManager } from './ShaderManager.js';
 import { UIManager } from './UI.js';
 import { GameState } from './GameState.js';
 import { ObjectManager } from './Objects.js';
+import { getLevelConfig } from './LevelConfig.js';
 
 class FlockingFrenzy {
     constructor() {
@@ -38,6 +39,10 @@ class FlockingFrenzy {
         this.clock = new THREE.Clock();
         this.deltaTime = 0;
         
+        // Level management
+        this.currentLevelId = 'level1';
+        this.currentLevelConfig = null;
+
 
         
         // Setup event listeners
@@ -52,6 +57,13 @@ class FlockingFrenzy {
         console.log('Three.js Revision:', THREE.REVISION);
         
         try {
+            // Load level configuration
+            this.currentLevelConfig = getLevelConfig(this.currentLevelId);
+            if (!this.currentLevelConfig) {
+                throw new Error(`Level config not found: ${this.currentLevelId}`);
+            }
+            console.log(`✓ Loaded level config: ${this.currentLevelConfig.name}`);
+
             // Load shaders
             await this.shaderManager.loadShaders();
             console.log('✓ Shaders loaded');
@@ -60,13 +72,8 @@ class FlockingFrenzy {
             await this.sceneManager.init(this.shaderManager);
             console.log('✓ Scene initialized');
 
-            // Spawn fish school
-            this.sceneManager.spawnFishSchool(80);
-
-            // Note: No default bait - players must place their own baits using build mode (key '6')
-
-            // Add test obstacles for fish to avoid
-            // this.sceneManager.addObstacle(new THREE.Vector3(5, 3, 0), 1.5, new THREE.Vector3(1, 2, 1));
+            // DON'T spawn fish yet - wait for game start
+            // Fish will be spawned when player clicks "Start Simulation"
 
             // Setup UI
             this.ui.init(this.gameState);
@@ -83,6 +90,9 @@ class FlockingFrenzy {
             this.camera.objectManager = this.objectManager;
             console.log('✓ Object manager initialized');
 
+            // Set inventory from level config
+            this.objectManager.inventoryManager.setLevel(this.currentLevelId);
+
             // Initialize inventory UI with inventory manager from ObjectManager
             this.ui.initInventory(this.objectManager.inventoryManager);
 
@@ -91,6 +101,20 @@ class FlockingFrenzy {
                 this.ui.updateInventory();
             };
             console.log('✓ Inventory UI initialized');
+
+            // Setup GameState with references to managers
+            this.gameState.setInventoryManager(this.objectManager.inventoryManager);
+            this.gameState.setObjectManager(this.objectManager);
+            this.gameState.setSceneManager(this.sceneManager);
+            this.gameState.loadLevel(this.currentLevelConfig);
+
+            // Setup callback for when simulation starts
+            this.gameState.onSimulationStart = this.onSimulationStart.bind(this);
+
+            // Setup callback for fish reaching goal
+            this.sceneManager.onFishReachGoal = () => {
+                this.gameState.onFishReachedGoal();
+            };
 
             // Set up bait consumption callback
             this.sceneManager.flockingSystem.onBaitConsumed = (baitObject) => {
@@ -105,17 +129,67 @@ class FlockingFrenzy {
             };
             console.log('✓ Bait consumption system initialized');
 
+            // Create goal zone from level config
+            const goalConfig = this.currentLevelConfig.goalConfig;
+            this.sceneManager.createGoalZone(
+                goalConfig.position,
+                goalConfig.radius,
+                goalConfig.color
+            );
+            console.log('✓ Goal zone created');
+
+            // Create spawn zone visualization
+            const fishConfig = this.currentLevelConfig.fishConfig;
+            this.sceneManager.createSpawnZone(
+                fishConfig.spawnPosition,
+                fishConfig.spawnSpread,
+                0xff9900 // Orange
+            );
+            console.log('✓ Spawn zone created');
+
             // Start render loop
             this.animate();
             console.log('✓ Render loop started');
             
             console.log('Flocking Frenzy initialized successfully!');
+            console.log('Place all items and press "Start Simulation" to begin!');
             console.log('Press H for help');
         } catch (error) {
             console.error('Initialization error:', error);
         }
     }
     
+    /**
+     * Called when simulation starts - spawn fish and predators
+     */
+    onSimulationStart() {
+        console.log('Spawning fish and predators...');
+
+        const fishConfig = this.currentLevelConfig.fishConfig;
+        const predatorConfig = this.currentLevelConfig.predatorConfig;
+
+        // Spawn fish school from level config
+        this.sceneManager.spawnFishSchool(
+            fishConfig.count,
+            fishConfig.spawnPosition,
+            fishConfig.spawnSpread
+        );
+
+        // Spawn predators from level config
+        if (predatorConfig && predatorConfig.spawns) {
+            for (const spawn of predatorConfig.spawns) {
+                this.sceneManager.spawnPredator(spawn.position);
+            }
+        }
+
+        console.log('✓ Fish and predators spawned - simulation active!');
+
+        // Clear spawn zone when simulation starts
+        this.sceneManager.clearSpawnZones();
+
+        console.log('✓ Fish and predators spawned - simulation active!');
+    }
+
     setupEventListeners() {
         // Window resize
         window.addEventListener('resize', this.onWindowResize);
@@ -246,8 +320,8 @@ class FlockingFrenzy {
         // Update camera
         this.camera.update(deltaTime);
         
-        // Update scene (fish, predators, etc.)
-        if (!this.gameState.paused) {
+        // Update scene (fish, predators, etc.) - only during simulation
+        if (!this.gameState.paused && this.gameState.phase === 'SIMULATION') {
             this.sceneManager.update(deltaTime);
         }
 

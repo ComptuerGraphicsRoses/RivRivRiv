@@ -47,8 +47,9 @@ export class Fish {
      * Update fish position and rotation based on steering forces
      */
     update(delta) {
-        if (!this.alive) return;
-        
+        // Skip physics if fish reached goal (performance optimization)
+        if (!this.alive || this.reachedGoal) return;
+
         // Limit acceleration
         if (this.acceleration.lengthSq() > this.maxForce * this.maxForce) {
             this.acceleration.normalize().multiplyScalar(this.maxForce);

@@ -8,7 +8,7 @@ export default class Predator {
         this.acceleration = new THREE.Vector3();
 
         // === AI PARAMETRELERİ ===
-        this.maxSpeed = 3.5;          // balıktan hızlı
+        this.maxSpeed = 2;          // balıktan hızlı
         this.maxForce = 0.15;
 
         this.detectionRadius = 10.0;  // metre

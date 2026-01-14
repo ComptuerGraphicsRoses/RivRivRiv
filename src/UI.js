@@ -179,11 +179,41 @@ export class UIManager {
         
         // Update survival percentage
         const aliveCount = gameState.fishAlive;
+        const savedCount = gameState.fishSaved;
         const totalCount = gameState.fishTotal;
         const percentage = totalCount > 0 ? ((aliveCount / totalCount) * 100).toFixed(0) : 100;
-        this.survivalDisplay.textContent = `Alive: ${aliveCount}/${totalCount} (${percentage}%)`;
+        this.survivalDisplay.textContent = `Alive: ${aliveCount}/${totalCount} | Saved: ${savedCount} (${percentage}%)`;
 
         // Update inventory hotbar
         this.updateInventory();
+
+        // Update start button state based on game phase and inventory
+        if (gameState.phase === 'PREPARATION') {
+            const canStart = gameState.canStartGame();
+            this.startButton.disabled = !canStart;
+
+            if (!canStart) {
+                this.startButton.textContent = 'Place All Items First!';
+                this.startButton.style.cursor = 'not-allowed';
+            } else {
+                this.startButton.textContent = 'Start Simulation';
+                this.startButton.style.cursor = 'pointer';
+            }
+        } else if (gameState.phase === 'SIMULATION') {
+            this.startButton.disabled = true;
+            this.startButton.textContent = 'Simulation Running...';
+        } else if (gameState.phase === 'EVALUATION') {
+            this.startButton.disabled = true;
+            this.startButton.textContent = 'Level Complete';
+        }
+
+        // Show/hide inventory based on game phase
+        if (this.inventoryHotbar) {
+            if (gameState.phase === 'PREPARATION') {
+                this.inventoryHotbar.style.display = 'block';
+            } else {
+                this.inventoryHotbar.style.display = 'none';
+            }
+        }
     }
 }
