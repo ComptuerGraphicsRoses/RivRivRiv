@@ -33,6 +33,10 @@ export class SceneManager {
         // Bait (goal) object
         this.bait = null;
         this.skybox = null;
+
+        // Callbacks
+        this.onFishDeath = null; // Callback when fish dies
+        this.onFishReachGoal = null; // Callback when fish reaches goal
     }
 
     init = async (shaderManager) => {
@@ -511,6 +515,13 @@ export class SceneManager {
             fish.setMesh(mesh);
             this.scene.add(mesh);
 
+            // Set death callback
+            fish.onDeath = () => {
+                if (this.onFishDeath) {
+                    this.onFishDeath();
+                }
+            };
+
             // Add to flocking system
             this.flockingSystem.addFish(fish);
             this.fish.push(fish);
@@ -540,6 +551,46 @@ export class SceneManager {
         this.flockingSystem.addBait(this.bait);
 
         console.log('✓ Created bait at', position);
+    }
+
+    /**
+     * Create a goal bait that doesn't get consumed (for guiding fish to goal)
+     */
+    createGoalBait = (position = new THREE.Vector3(10, 3, 10)) => {
+        const baitGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+        const baitMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.8,
+            roughness: 0.2,
+            metalness: 0.8
+        });
+
+        const goalBait = new THREE.Mesh(baitGeometry, baitMaterial);
+        goalBait.position.copy(position);
+        goalBait.userData.isGoalBait = true; // Mark as special goal bait
+        goalBait.userData.createdBy = 'SceneManager';
+        this.scene.add(goalBait);
+
+        // Register with flocking system
+        this.flockingSystem.addBait(goalBait);
+
+        console.log('✓ Created goal bait at', position);
+        return goalBait;
+    }
+
+    /**
+     * Remove goal bait
+     */
+    removeGoalBait = () => {
+        if (this.bait && this.bait.userData.isGoalBait) {
+            this.flockingSystem.removeBait(this.bait);
+            this.scene.remove(this.bait);
+            if (this.bait.geometry) this.bait.geometry.dispose();
+            if (this.bait.material) this.bait.material.dispose();
+            this.bait = null;
+            console.log('✓ Goal bait removed');
+        }
     }
 
     /**

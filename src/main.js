@@ -116,6 +116,11 @@ class FlockingFrenzy {
                 this.gameState.onFishReachedGoal();
             };
 
+            // Setup callback for fish death
+            this.sceneManager.onFishDeath = () => {
+                this.gameState.onFishDeath();
+            };
+
             // Set up bait consumption callback
             this.sceneManager.flockingSystem.onBaitConsumed = (baitObject) => {
                 // Check if this bait was created by ObjectManager or SceneManager
@@ -182,7 +187,9 @@ class FlockingFrenzy {
             }
         }
 
-        console.log('✓ Fish and predators spawned - simulation active!');
+        // Create goal bait to guide fish
+        const goalConfig = this.currentLevelConfig.goalConfig;
+        this.sceneManager.bait = this.sceneManager.createGoalBait(goalConfig.position);
 
         // Clear spawn zone when simulation starts
         this.sceneManager.clearSpawnZones();

@@ -28,9 +28,13 @@ export class Fish {
         // State
         this.alive = true;
         this.reachedGoal = false;
-        
+        this.wasDead = false; // Track if death callback was already called
+
         // Bait consumption
         this.baitConsumptionRadius = 0.6;  // How close to bait to consume it
+
+        // Callbacks
+        this.onDeath = null; // Callback when fish dies
 
         // Rendering
         this.mesh = null;
@@ -139,9 +143,16 @@ export class Fish {
      * Kill this fish
      */
     die() {
+        const wasAlive = this.alive;
         this.alive = false;
         if (this.mesh) {
             this.mesh.visible = false;
+        }
+
+        // Notify callback if fish was alive (prevent duplicate death calls)
+        if (wasAlive && this.onDeath && !this.wasDead) {
+            this.onDeath();
+            this.wasDead = true;
         }
     }
 }
