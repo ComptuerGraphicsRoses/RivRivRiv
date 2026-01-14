@@ -62,8 +62,8 @@ export class ShaderManager {
     createPhongUniforms = () => {
         return {
             // Ambient light
-            ambientColor: { value: new THREE.Color(0x404040) },
-            ambientIntensity: { value: 1.0 },
+            ambientColor: { value: new THREE.Color(0x7296DD) },
+            ambientIntensity: { value: 1.5 },
 
             // Directional light
             directionalLightDir: { value: new THREE.Vector3(1, -1, 1).normalize() },
@@ -92,12 +92,21 @@ export class ShaderManager {
     createToonUniforms = () => {
         return {
             // Lighting
-            ambientColor: { value: new THREE.Color(0x404040) },
-            ambientIntensity: { value: 1.0 },
+            ambientColor: { value: new THREE.Color(0x7296DD) },
+            ambientIntensity: { value: 1.5 },
 
             directionalLightDir: { value: new THREE.Vector3(1, -1, 1).normalize() },
             directionalLightColor: { value: new THREE.Color(0xffffff) },
             directionalLightIntensity: { value: 1.0 },
+
+            // Spotlight
+            spotLightPosition: { value: new THREE.Vector3(0, 10, 0) },
+            spotLightDirection: { value: new THREE.Vector3(0, -1, 0) },
+            spotLightColor: { value: new THREE.Color(0xffffff) },
+            spotLightIntensity: { value: 2.0 },
+            spotLightAngle: { value: Math.PI / 6 },
+            spotLightPenumbra: { value: 0.2 },
+            spotLightEnabled: { value: true },
 
             // Material properties
             materialColor: { value: new THREE.Color(0xffffff) },
@@ -170,16 +179,28 @@ export class ShaderManager {
 
         // Update Phong shader uniforms
         if (this.shaders.phong.uniforms) {
+            // Sync ambient light color and intensity
+            if (lights.ambient) {
+                this.shaders.phong.uniforms.ambientColor.value.copy(lights.ambient.color);
+                this.shaders.phong.uniforms.ambientIntensity.value = lights.ambient.intensity;
+            }
+
+            // Sync directional light
             if (lights.directional) {
                 this.shaders.phong.uniforms.directionalLightDir.value.copy(
                     lights.directional.position
                 ).normalize();
+                this.shaders.phong.uniforms.directionalLightColor.value.copy(lights.directional.color);
+                this.shaders.phong.uniforms.directionalLightIntensity.value = lights.directional.intensity;
             }
 
+            // Sync spotlight
             if (lights.spotlight) {
                 this.shaders.phong.uniforms.spotLightPosition.value.copy(
                     lights.spotlight.position
                 );
+                this.shaders.phong.uniforms.spotLightColor.value.copy(lights.spotlight.color);
+                this.shaders.phong.uniforms.spotLightIntensity.value = lights.spotlight.intensity;
 
                 const targetDir = new THREE.Vector3();
                 targetDir.subVectors(
@@ -192,10 +213,35 @@ export class ShaderManager {
 
         // Update Toon shader uniforms
         if (this.shaders.toon.uniforms) {
+            // Sync ambient light color and intensity
+            if (lights.ambient) {
+                this.shaders.toon.uniforms.ambientColor.value.copy(lights.ambient.color);
+                this.shaders.toon.uniforms.ambientIntensity.value = lights.ambient.intensity;
+            }
+
+            // Sync directional light
             if (lights.directional) {
                 this.shaders.toon.uniforms.directionalLightDir.value.copy(
                     lights.directional.position
                 ).normalize();
+                this.shaders.toon.uniforms.directionalLightColor.value.copy(lights.directional.color);
+                this.shaders.toon.uniforms.directionalLightIntensity.value = lights.directional.intensity;
+            }
+
+            // Sync spotlight
+            if (lights.spotlight) {
+                this.shaders.toon.uniforms.spotLightPosition.value.copy(
+                    lights.spotlight.position
+                );
+                this.shaders.toon.uniforms.spotLightColor.value.copy(lights.spotlight.color);
+                this.shaders.toon.uniforms.spotLightIntensity.value = lights.spotlight.intensity;
+
+                const targetDir = new THREE.Vector3();
+                targetDir.subVectors(
+                    lights.spotlight.target.position,
+                    lights.spotlight.position
+                ).normalize();
+                this.shaders.toon.uniforms.spotLightDirection.value.copy(targetDir);
             }
         }
     }
