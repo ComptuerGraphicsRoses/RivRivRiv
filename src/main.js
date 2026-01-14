@@ -38,7 +38,7 @@ class FlockingFrenzy {
         // Timing
         this.clock = new THREE.Clock();
         this.deltaTime = 0;
-        
+
         // Level management
         this.currentLevelId = 'level1';
         this.currentLevelConfig = null;
@@ -85,7 +85,8 @@ class FlockingFrenzy {
                 this.sceneManager.scene,
                 this.camera.camera,
                 this.canvas,
-                this.sceneManager  // Pass SceneManager for bait registration
+                this.sceneManager,  // Pass SceneManager for bait registration
+                this.shaderManager  // Pass ShaderManager for shader material creation
             );
             // Pass ObjectManager reference to camera so it can check rotation mode
             this.camera.objectManager = this.objectManager;
@@ -182,7 +183,7 @@ class FlockingFrenzy {
             console.error('Initialization error:', error);
         }
     }
-    
+
     /**
      * Called when simulation starts - spawn fish and predators
      */
@@ -503,7 +504,7 @@ class FlockingFrenzy {
 
         // Update camera
         this.camera.update(deltaTime);
-        
+
         // Update scene (fish, predators, etc.) - only during simulation
         if (!this.gameState.paused && this.gameState.phase === 'SIMULATION') {
             this.sceneManager.update(deltaTime);

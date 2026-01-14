@@ -7,11 +7,12 @@ import { InventoryManager } from './Inventory.js';
 import { createObjectType } from './ObjectTypes.js';
 
 export class ObjectManager {
-    constructor(scene, camera, canvas, sceneManager = null) {
+    constructor(scene, camera, canvas, sceneManager = null, shaderManager = null) {
         this.scene = scene;
         this.camera = camera;
         this.canvas = canvas;
         this.sceneManager = sceneManager; // Reference to SceneManager for bait registration
+        this.shaderManager = shaderManager; // Reference to ShaderManager for creating shader materials
         this.gameState = null; // Reference to GameState for phase checking
 
         this.placedObjects = [];
@@ -748,31 +749,42 @@ export class ObjectManager {
                 fbx.position.copy(position);
                 fbx.rotation.copy(rotation);
 
-                // Preserve original materials and textures
-                fbx.traverse((child) => {
-                    if (child.isMesh) {
-                        // Handle both single materials and material arrays
-                        const materials = Array.isArray(child.material) ? child.material : [child.material];
+                // Extract textures from the original materials
+                const textures = this.extractTexturesFromFBX(fbx);
 
-                        materials.forEach(mat => {
-                            if (mat) {
-                                // Keep original textures, adjust properties
-                                mat.metalness = 0.3;
-                                mat.roughness = 0.7;
-                                mat.transparent = false; // Remove preview transparency
-                                mat.opacity = 1.0;
+                // Create shader materials if shader manager is available
+                if (this.shaderManager) {
+                    this.createShaderMaterialsForFBX(fbx, textures);
 
-                                // Only change color if there's no texture map
-                                if (!mat.map) {
-                                    mat.color.setHex(this.getPlacedColor(this.selectedShape));
+                    // Apply the current active shader
+                    this.applyShaderToFBX(fbx, this.shaderManager.activeShader);
+                } else {
+                    // Fallback: Preserve original materials and textures
+                    fbx.traverse((child) => {
+                        if (child.isMesh) {
+                            // Handle both single materials and material arrays
+                            const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                            materials.forEach(mat => {
+                                if (mat) {
+                                    // Keep original textures, adjust properties
+                                    mat.metalness = 0.3;
+                                    mat.roughness = 0.7;
+                                    mat.transparent = false; // Remove preview transparency
+                                    mat.opacity = 1.0;
+
+                                    // Only change color if there's no texture map
+                                    if (!mat.map) {
+                                        mat.color.setHex(this.getPlacedColor(this.selectedShape));
+                                    }
                                 }
-                            }
-                        });
+                            });
 
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                }
 
                 // Store object type and attributes
                 fbx.userData.type = this.selectedShape;
@@ -782,6 +794,12 @@ export class ObjectManager {
 
                 this.scene.add(fbx);
                 this.placedObjects.push(fbx);
+
+                // Register with SceneManager for shader switching
+                if (this.sceneManager && this.shaderManager) {
+                    this.sceneManager.addFBXModel(fbx);
+                    console.log('✓ FBX object registered with shader system');
+                }
 
                 // Record placement in inventory
                 this.inventoryManager.recordPlacement(this.selectedShape);
@@ -820,6 +838,86 @@ export class ObjectManager {
             }
         );
     }
+
+    /**
+     * Extract textures from FBX model's original materials
+     * @param {THREE.Group} fbx - The FBX model
+     * @returns {Map<string, THREE.Texture>} Map of mesh UUID to texture
+     */
+    extractTexturesFromFBX(fbx) {
+        const textures = new Map();
+
+        fbx.traverse((child) => {
+            if (child.isMesh && child.material) {
+                // Handle both single material and material array
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                materials.forEach((material) => {
+                    // Check if material has a valid map (texture)
+                    if (material.map && material.map.isTexture) {
+                        textures.set(child.uuid, material.map);
+                    }
+                });
+            }
+        });
+
+        return textures;
+    }
+
+    /**
+     * Create shader materials (phong and toon) for an FBX model
+     * @param {THREE.Group} fbx - The FBX model
+     * @param {Map<string, THREE.Texture>} textures - Map of mesh UUID to texture
+     */
+    createShaderMaterialsForFBX(fbx, textures) {
+        if (!this.shaderManager) return;
+
+        // Store materials on the model's userData
+        fbx.userData.shaderMaterials = {
+            phong: new Map(),
+            toon: new Map()
+        };
+
+        fbx.traverse((child) => {
+            if (child.isMesh) {
+                const texture = textures.get(child.uuid) || null;
+
+                // Create phong material
+                const phongMaterial = this.shaderManager.createShaderMaterial('phong', texture);
+                fbx.userData.shaderMaterials.phong.set(child.uuid, phongMaterial);
+
+                // Create toon material
+                const toonMaterial = this.shaderManager.createShaderMaterial('toon', texture);
+                fbx.userData.shaderMaterials.toon.set(child.uuid, toonMaterial);
+
+                // Enable shadows
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+    }
+
+    /**
+     * Apply a specific shader to an FBX model
+     * @param {THREE.Group} fbx - The FBX model
+     * @param {string} shaderName - 'phong' or 'toon'
+     */
+    applyShaderToFBX(fbx, shaderName) {
+        if (!fbx.userData.shaderMaterials || !fbx.userData.shaderMaterials[shaderName]) {
+            console.warn('Shader materials not found for FBX model');
+            return;
+        }
+
+        fbx.traverse((child) => {
+            if (child.isMesh) {
+                const material = fbx.userData.shaderMaterials[shaderName].get(child.uuid);
+                if (material) {
+                    child.material = material;
+                }
+            }
+        });
+    }
+
 
     placeObject() {
         if (!this.previewObject) return;

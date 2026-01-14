@@ -5,7 +5,7 @@
 
 import {
     GAME_SCALE,
-    BOUNDARY_HALF_X, 
+    BOUNDARY_HALF_X,
     BOUNDARY_MIN_Y,
     BOUNDARY_MAX_Y,
     BOUNDARY_HALF_Z,
@@ -219,7 +219,7 @@ export class SceneManager {
                     // Apply GAME_SCALE to both scale and position
                     const scaledScale = scale.clone().multiplyScalar(GAME_SCALE);
                     const scaledPosition = position.clone().multiplyScalar(GAME_SCALE);
-                    
+
                     fbx.scale.copy(scaledScale);
                     fbx.position.copy(scaledPosition);
                     fbx.rotation.copy(rotation);
@@ -604,9 +604,9 @@ export class SceneManager {
         const width = BOUNDARY_HALF_X * 2;   // 20
         const height = BOUNDARY_MAX_Y - BOUNDARY_MIN_Y; // 6.5
         const depth = BOUNDARY_HALF_Z * 2;   // 20
-        
+
         const centerY = (BOUNDARY_MIN_Y + BOUNDARY_MAX_Y) / 2; // 1.75
-        
+
         // Create wireframe box
         const boundaryGeometry = new THREE.BoxGeometry(width, height, depth);
         const boundaryMaterial = new THREE.MeshBasicMaterial({
@@ -615,11 +615,11 @@ export class SceneManager {
             transparent: true,
             opacity: 0.3
         });
-        
+
         const boundaryBox = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
         boundaryBox.position.set(0, centerY, 0);
         this.scene.add(boundaryBox);
-        
+
         console.log(`✓ Boundary visualization created: ${width}x${height}x${depth} at (0, ${centerY.toFixed(2)}, 0)`);
     }
 
@@ -852,28 +852,28 @@ export class SceneManager {
     }
 
     spawnPredator = (position = new THREE.Vector3(0, 2, 0)) => {
-    const predator = new Predator(position);
+        const predator = new Predator(position);
 
-    // 🦈 Mesh
-    const geometry = new THREE.ConeGeometry(0.4, 1.5, 12);
-    geometry.rotateX(-Math.PI / 2);
+        // 🦈 Mesh
+        const geometry = new THREE.ConeGeometry(0.4, 1.5, 12);
+        geometry.rotateX(-Math.PI / 2);
 
-    const material = new THREE.MeshStandardMaterial({
-        color: 0x888888,
-        roughness: 0.4,
-        metalness: 0.6
-    });
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x888888,
+            roughness: 0.4,
+            metalness: 0.6
+        });
 
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.castShadow = true;
-    mesh.position.copy(position);
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.position.copy(position);
 
-    predator.mesh = mesh;
+        predator.mesh = mesh;
 
-    this.scene.add(mesh);
-    this.predators.push(predator);
+        this.scene.add(mesh);
+        this.predators.push(predator);
 
-    console.log('✓ Predator spawned');
+        console.log('✓ Predator spawned');
     }
 
     /**
@@ -1153,6 +1153,7 @@ export class SceneManager {
     }
 
 
+
     updateShader = (shaderManager) => {
         // Store shader manager reference
         this.shaderManager = shaderManager;
@@ -1164,6 +1165,16 @@ export class SceneManager {
 
         console.log('Scene shader updated to:', shaderManager.activeShader);
     }
+
+    /**
+     * Add an FBX model to the shader management system
+     * Used by ObjectManager to register placed FBX objects
+     * @param {THREE.Group} fbx - The FBX model to add
+     */
+    addFBXModel = (fbx) => {
+        this.fbxModels.push(fbx);
+    }
+
 
     update = (deltaTime) => {
         // Animate test objects (simple rotation for demonstration)
