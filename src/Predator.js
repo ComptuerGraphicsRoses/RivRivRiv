@@ -1,4 +1,11 @@
 // Predator.js
+import {
+    BOUNDARY_HALF_X, 
+    BOUNDARY_MIN_Y,
+    BOUNDARY_MAX_Y,
+    BOUNDARY_HALF_Z,
+} from "./FlockingSystem.js";
+
 import * as THREE from 'three';
 
 export default class Predator {
@@ -44,6 +51,12 @@ export default class Predator {
         }
 
         this.position.addScaledVector(this.velocity, deltaTime);
+        
+        // Clamp predator position to boundaries (same as fish boundaries)
+        // Boundaries: X[-10,+10], Y[-0.5,5], Z[-10,+10]
+        this.position.x = Math.max(-BOUNDARY_HALF_X, Math.min(BOUNDARY_HALF_X, this.position.x));
+        this.position.y = Math.max(BOUNDARY_MIN_Y, Math.min(BOUNDARY_MAX_Y, this.position.y));
+        this.position.z = Math.max(-BOUNDARY_HALF_Z, Math.min(BOUNDARY_HALF_Z, this.position.z));
 
         this.acceleration.set(0, 0, 0);
     }

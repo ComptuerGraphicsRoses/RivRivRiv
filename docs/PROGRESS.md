@@ -134,8 +134,8 @@
 - [x] Boid simülasyonu değerlerini fine tune edip balık sürüsü gibi olmasını sağlama
 
 - [x] Sahne sınırlarını implement edeceğim
-  - [ ] Kamera sınırları aşamayacak
+  - [x] Kamera sınırları aşamayacak
   - [x] Balıklar sınırları aşamayacak
-  - [ ] Köpek balığı sınırları aşamayacak
+  - [x] Köpek balığı sınırları aşamayacak
 
 - [ ] Balıkların köpek balığından kaçmasını yapcam
