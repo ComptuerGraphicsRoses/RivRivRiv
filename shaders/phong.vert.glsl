@@ -1,15 +1,6 @@
 // Phong Lighting Vertex Shader (Realistic Lighting)
-
-// Uniforms
-uniform mat3 normalMatrix;
-uniform mat4 modelMatrix;
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
-
-// Attributes
-attribute vec3 position;
-attribute vec3 normal;
-attribute vec2 uv;
+// Three.js built-in uniforms: modelMatrix, modelViewMatrix, projectionMatrix, normalMatrix
+// Three.js built-in attributes: position, normal, uv
 
 // Varying outputs
 varying vec3 vNormal;

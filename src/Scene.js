@@ -31,9 +31,18 @@ export class SceneManager {
         // Bait (goal) object
         this.bait = null;
         this.skybox = null;
+
+        // Store FBX models for shader switching
+        this.fbxModels = [];
+
+        // Store reference to shader manager
+        this.shaderManager = null;
     }
 
     init = async (shaderManager) => {
+        // Store shader manager reference
+        this.shaderManager = shaderManager;
+
         // Setup lighting
         this.setupLights();
 
@@ -66,8 +75,21 @@ export class SceneManager {
                 '../assets/models/Scene.fbx',
                 (fbx) => {
                     fbx.scale.set(0.05, 0.05, 0.05);
+
+                    // Extract textures from the model before applying shaders
+                    const textures = this.extractTexturesFromModel(fbx);
+
+                    // Apply shader materials if shader manager is available
+                    if (this.shaderManager) {
+                        this.createShaderMaterialsForModel(fbx, textures);
+                        this.applyShaderToModel(fbx, this.shaderManager.activeShader);
+                    }
+
+                    // Store model reference for shader switching
+                    this.fbxModels.push(fbx);
+
                     this.scene.add(fbx);
-                    console.log('✓ Scene.fbx loaded with textures');
+                    console.log('✓ Scene.fbx loaded with shader materials');
                     resolve(fbx);
                 },
                 (progress) => {
@@ -78,6 +100,88 @@ export class SceneManager {
                     reject(error);
                 }
             );
+        });
+    }
+
+    /**
+     * Extract textures from FBX model's original materials
+     * @param {THREE.Group} fbx - The FBX model
+     * @returns {Map<string, THREE.Texture>} Map of mesh UUID to texture
+     */
+    extractTexturesFromModel = (fbx) => {
+        const textures = new Map();
+
+        fbx.traverse((child) => {
+            if (child.isMesh && child.material) {
+                // Handle both single material and material array
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                materials.forEach((material) => {
+                    // Check if material has a valid map (texture)
+                    if (material.map && material.map.isTexture) {
+                        textures.set(child.uuid, material.map);
+                    }
+                });
+            }
+        });
+
+        if (textures.size > 0) {
+            console.log(`✓ Extracted ${textures.size} textures from FBX model`);
+        } else {
+            console.log('ℹ No textures found in FBX model, using material colors');
+        }
+        return textures;
+    }
+
+    /**
+     * Create shader materials (phong and toon) for an FBX model
+     * @param {THREE.Group} fbx - The FBX model
+     * @param {Map<string, THREE.Texture>} textures - Map of mesh UUID to texture
+     */
+    createShaderMaterialsForModel = (fbx, textures) => {
+        if (!this.shaderManager) return;
+
+        // Store materials on the model's userData
+        fbx.userData.shaderMaterials = {
+            phong: new Map(),
+            toon: new Map()
+        };
+
+        fbx.traverse((child) => {
+            if (child.isMesh) {
+                const texture = textures.get(child.uuid) || null;
+
+                // Create phong material
+                const phongMaterial = this.shaderManager.createShaderMaterial('phong', texture);
+                fbx.userData.shaderMaterials.phong.set(child.uuid, phongMaterial);
+
+                // Create toon material
+                const toonMaterial = this.shaderManager.createShaderMaterial('toon', texture);
+                fbx.userData.shaderMaterials.toon.set(child.uuid, toonMaterial);
+            }
+        });
+
+        console.log('✓ Created shader materials for FBX model');
+    }
+
+    /**
+     * Apply a specific shader to an FBX model
+     * @param {THREE.Group} fbx - The FBX model
+     * @param {string} shaderName - 'phong' or 'toon'
+     */
+    applyShaderToModel = (fbx, shaderName) => {
+        if (!fbx.userData.shaderMaterials || !fbx.userData.shaderMaterials[shaderName]) {
+            console.warn('Shader materials not found for model');
+            return;
+        }
+
+        fbx.traverse((child) => {
+            if (child.isMesh) {
+                const material = fbx.userData.shaderMaterials[shaderName].get(child.uuid);
+                if (material) {
+                    child.material = material;
+                }
+            }
         });
     }
 
@@ -621,8 +725,14 @@ export class SceneManager {
     }
 
     updateShader = (shaderManager) => {
-        // This will be used to switch materials when shader changes
-        // For now using standard materials, will integrate custom shaders later
+        // Store shader manager reference
+        this.shaderManager = shaderManager;
+
+        // Apply shader to all stored FBX models
+        this.fbxModels.forEach(fbx => {
+            this.applyShaderToModel(fbx, shaderManager.activeShader);
+        });
+
         console.log('Scene shader updated to:', shaderManager.activeShader);
     }
 

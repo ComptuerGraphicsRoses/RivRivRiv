@@ -17,9 +17,13 @@ uniform float spotLightAngle;
 uniform float spotLightPenumbra;
 uniform bool spotLightEnabled;
 
-uniform vec3 cameraPosition;
+// Three.js built-in: cameraPosition
 uniform vec3 materialColor;
 uniform float materialShininess;
+
+// Texture support
+uniform sampler2D map;
+uniform bool hasTexture;
 
 varying vec3 vNormal;
 varying vec3 vPosition;
@@ -72,8 +76,15 @@ void main() {
         }
     }
     
+    // Sample texture if available
+    vec3 baseColor = materialColor;
+    if (hasTexture) {
+        vec4 texColor = texture2D(map, vUv);
+        baseColor = texColor.rgb * materialColor;
+    }
+    
     // Combine all lighting
-    vec3 finalColor = materialColor * (ambient + diffuse + specular) + spotContribution;
+    vec3 finalColor = baseColor * (ambient + diffuse + specular) + spotContribution;
     
     gl_FragColor = vec4(finalColor, 1.0);
 }
