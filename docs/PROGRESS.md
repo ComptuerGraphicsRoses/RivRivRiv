@@ -140,4 +140,4 @@
 
 - [ ] Balıkların köpek balığından kaçmasını yapcam
 - [ ] Köpek balığının obstacle avoidance'ı eklenecek
-- [ ] item yerleştirme bug'ını çözmek
+- [x] item yerleştirme bug'ını çözmek

@@ -974,7 +974,7 @@ export class SceneManager {
 
         // 🦈 Update predators
         this.predators.forEach(predator => {
-            predator.update(deltaTime, this.fish);
+            predator.update(deltaTime, this.fish, this.flockingSystem.obstacles);
 
             if (predator.mesh) {
                 predator.mesh.position.copy(predator.position);

@@ -40,7 +40,7 @@ export const LEVEL_CONFIGS = {
             spotlight: 1   // Spotlights
         },
         requiredSurvivalPercentage: 0.6, // 60%
-        maxTime: 30.0
+        maxTime: 60.0
     },
 
     level2: {
