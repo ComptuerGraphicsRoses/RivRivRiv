@@ -1,6 +1,6 @@
 // javascript
 // src/Objects.js - add scroll-controlled preview distance
-import { GAME_SCALE } from "./FlockingSystem.js";
+import { GAME_SCALE, BOUNDARY_HALF_X, BOUNDARY_HALF_Z, BOUNDARY_MIN_Y, BOUNDARY_MAX_Y } from "./FlockingSystem.js";
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { InventoryManager } from './Inventory.js';
@@ -442,8 +442,22 @@ export class ObjectManager {
 
         // Check if object requires ground placement (e.g., Rock3)
         const objectTypeData = createObjectType(this.selectedShape);
+        
+        // Calculate clamping boundaries with buffer
+        // We want objects to be reachable, so they must be inside the fish boundaries
+        const objectRadius = (this.getShapeSize(this.selectedShape) / 2) || 1;
+        const safetyMargin = 1.0; // Ensure fish can comfortably reach around it without hitting boundary force
+        const totalBuffer = objectRadius + safetyMargin;
+
+        // Clamp X and Z (applies to all objects)
+        position.x = Math.max(-BOUNDARY_HALF_X + totalBuffer, Math.min(BOUNDARY_HALF_X - totalBuffer, position.x));
+        position.z = Math.max(-BOUNDARY_HALF_Z + totalBuffer, Math.min(BOUNDARY_HALF_Z - totalBuffer, position.z));
+
         if (objectTypeData.requiresGroundPlacement) {
-            position.y = 0; // Clamp to ground level
+            position.y = 0.2; // Clamp to ground level slightly above 0 to avoid z-fighting
+        } else {
+             // For floating objects, also clamp Y
+             position.y = Math.max(BOUNDARY_MIN_Y + totalBuffer, Math.min(BOUNDARY_MAX_Y - totalBuffer, position.y));
         }
 
         this.previewObject.position.copy(position);
