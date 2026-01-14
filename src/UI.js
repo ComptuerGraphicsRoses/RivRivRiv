@@ -181,7 +181,7 @@ export class UIManager {
         const aliveCount = gameState.fishAlive;
         const savedCount = gameState.fishSaved;
         const totalCount = gameState.fishTotal;
-        const percentage = totalCount > 0 ? ((aliveCount / totalCount) * 100).toFixed(0) : 100;
+        const percentage = totalCount > 0 ? ((savedCount / totalCount) * 100).toFixed(0) : 100;
         this.survivalDisplay.textContent = `Alive: ${aliveCount}/${totalCount} | Saved: ${savedCount} (${percentage}%)`;
 
         // Update inventory hotbar

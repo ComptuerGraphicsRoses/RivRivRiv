@@ -28,7 +28,7 @@ export const LEVEL_CONFIGS = {
         },
         predatorConfig: {
             spawns: [
-                { position: new THREE.Vector3(0, 3, 5) }
+                { position: new THREE.Vector3(8, 3, -8) }
             ]
         },
         inventory: {
