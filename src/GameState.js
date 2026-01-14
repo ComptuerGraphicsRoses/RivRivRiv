@@ -25,6 +25,7 @@ export class GameState {
         
         // Level configuration
         this.currentLevel = 'level1';
+        this.currentLevelId = 'level1';
         this.requiredSurvivalPercentage = 0.6; // 60%
 
         // References to other managers
@@ -34,6 +35,7 @@ export class GameState {
 
         // Callbacks
         this.onSimulationStart = null; // Called when simulation starts
+        this.onLevelEnd = null; // Called when level ends (win or lose)
     }
 
     /**
@@ -60,9 +62,11 @@ export class GameState {
     /**
      * Load level configuration
      * @param {Object} levelConfig - Level configuration from LevelConfig.js
+     * @param {string} levelId - Level identifier (e.g., 'level1')
      */
-    loadLevel = (levelConfig) => {
+    loadLevel = (levelConfig, levelId = null) => {
         this.currentLevel = levelConfig.name || 'Unknown Level';
+        this.currentLevelId = levelId || this.currentLevelId;
         this.currentLevelConfig = levelConfig; // Store full config for restart
         this.maxTime = levelConfig.maxTime || 30.0;
         this.requiredSurvivalPercentage = levelConfig.requiredSurvivalPercentage || 0.6;
@@ -207,8 +211,9 @@ export class GameState {
         this.phase = 'EVALUATION';
         
         const survivalRate = this.fishSaved / this.fishTotal;
-        
-        if (survivalRate >= this.requiredSurvivalPercentage) {
+        const isWin = survivalRate >= this.requiredSurvivalPercentage;
+
+        if (isWin) {
             // Win
             this.score += 50; // Completion bonus
             console.log('LEVEL COMPLETE!');
@@ -219,6 +224,11 @@ export class GameState {
             console.log('LEVEL FAILED');
             console.log(`Survival Rate: ${(survivalRate * 100).toFixed(1)}% (Required: ${(this.requiredSurvivalPercentage * 100)}%)`);
             console.log(`Final Score: ${Math.floor(this.score)}`);
+        }
+
+        // Trigger callback for UI popup
+        if (this.onLevelEnd) {
+            this.onLevelEnd(isWin);
         }
     }
 }

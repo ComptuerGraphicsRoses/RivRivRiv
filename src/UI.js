@@ -21,6 +21,17 @@ export class UIManager {
         this.startButton = document.getElementById('start-simulation');
         this.restartButton = document.getElementById('restart-level');
 
+        // Game end popup
+        this.gameEndPopup = document.getElementById('game-end-popup');
+        this.popupTitle = document.getElementById('popup-title');
+        this.popupScore = document.getElementById('popup-score');
+        this.popupSaved = document.getElementById('popup-saved');
+        this.popupSurvival = document.getElementById('popup-survival');
+        this.popupRequired = document.getElementById('popup-required');
+        this.popupMessage = document.getElementById('popup-message');
+        this.popupRestartBtn = document.getElementById('popup-restart');
+        this.popupNextBtn = document.getElementById('popup-next');
+
         // Inventory hotbar
         this.inventoryHotbar = document.getElementById('inventory-hotbar');
         this.inventorySlotsContainer = document.getElementById('inventory-slots');
@@ -42,6 +53,7 @@ export class UIManager {
         });
         
         this.restartButton.addEventListener('click', () => {
+            this.hideGameEndPopup(); // Hide popup if visible
             gameState.restartLevel();
         });
     }
@@ -153,7 +165,62 @@ export class UIManager {
             this.helpMenu.classList.add('hidden');
         }
     }
-    
+
+    /**
+     * Show game end popup with results
+     * @param {GameState} gameState - Current game state
+     * @param {boolean} isWin - Whether the player won
+     * @param {boolean} hasNextLevel - Whether there's a next level available
+     */
+    showGameEndPopup = (gameState, isWin, hasNextLevel = true) => {
+        // Set win/lose styling
+        this.gameEndPopup.classList.remove('win', 'lose');
+        this.gameEndPopup.classList.add(isWin ? 'win' : 'lose');
+
+        // Set title
+        this.popupTitle.textContent = isWin ? '🎉 Level Complete!' : '💀 Level Failed';
+
+        // Set stats
+        this.popupScore.textContent = Math.floor(gameState.score);
+        this.popupSaved.textContent = `${gameState.fishSaved}/${gameState.fishTotal}`;
+
+        const survivalRate = gameState.fishTotal > 0
+            ? ((gameState.fishSaved / gameState.fishTotal) * 100).toFixed(1)
+            : 0;
+        this.popupSurvival.textContent = `${survivalRate}%`;
+        this.popupRequired.textContent = `${(gameState.requiredSurvivalPercentage * 100).toFixed(0)}%`;
+
+        // Set message based on result
+        if (isWin) {
+            this.popupMessage.textContent = 'Great job guiding the fish to safety! Ready for the next challenge?';
+        } else {
+            this.popupMessage.textContent = `Not enough fish survived. You needed ${(gameState.requiredSurvivalPercentage * 100).toFixed(0)}% survival rate. Try again!`;
+        }
+
+        // Configure next level button
+        if (isWin && hasNextLevel) {
+            this.popupNextBtn.disabled = false;
+            this.popupNextBtn.textContent = 'Next Level';
+        } else if (isWin && !hasNextLevel) {
+            this.popupNextBtn.disabled = true;
+            this.popupNextBtn.textContent = 'All Levels Complete!';
+            this.popupMessage.textContent = '🏆 Congratulations! You completed all levels! You are a true fish guardian!';
+        } else {
+            this.popupNextBtn.disabled = true;
+            this.popupNextBtn.textContent = 'Next Level';
+        }
+
+        // Show popup
+        this.gameEndPopup.classList.remove('hidden');
+    }
+
+    /**
+     * Hide game end popup
+     */
+    hideGameEndPopup = () => {
+        this.gameEndPopup.classList.add('hidden');
+    }
+
     update = (gameState) => {
         // Update score
         this.scoreDisplay.textContent = Math.floor(gameState.score);

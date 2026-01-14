@@ -118,7 +118,37 @@
         <button id="start-simulation" disabled>Start Simulation</button>
         <button id="restart-level">Restart Level</button>
     </div>
-    
+
+    <!-- Game End Popup -->
+    <div id="game-end-popup" class="hidden">
+        <div class="popup-content">
+            <h1 id="popup-title">Level Complete!</h1>
+            <div class="popup-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Final Score</span>
+                    <span id="popup-score" class="stat-value">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Fish Saved</span>
+                    <span id="popup-saved" class="stat-value">0/0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Survival Rate</span>
+                    <span id="popup-survival" class="stat-value">0%</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Required</span>
+                    <span id="popup-required" class="stat-value">60%</span>
+                </div>
+            </div>
+            <p id="popup-message" class="popup-message">Great job guiding the fish to safety!</p>
+            <div class="popup-buttons">
+                <button id="popup-restart" class="popup-btn">Restart Level (R)</button>
+                <button id="popup-next" class="popup-btn primary">Next Level</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Application Entry Point -->
     <script type="module" src="./src/main.js"></script>
 </body>

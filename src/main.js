@@ -10,7 +10,7 @@ import { ShaderManager } from './ShaderManager.js';
 import { UIManager } from './UI.js';
 import { GameState } from './GameState.js';
 import { ObjectManager } from './Objects.js';
-import { getLevelConfig } from './LevelConfig.js';
+import { getLevelConfig, getAllLevelIds } from './LevelConfig.js';
 
 class FlockingFrenzy {
     constructor() {
@@ -106,13 +106,19 @@ class FlockingFrenzy {
             this.gameState.setInventoryManager(this.objectManager.inventoryManager);
             this.gameState.setObjectManager(this.objectManager);
             this.gameState.setSceneManager(this.sceneManager);
-            this.gameState.loadLevel(this.currentLevelConfig);
+            this.gameState.loadLevel(this.currentLevelConfig, this.currentLevelId);
 
             // Give ObjectManager reference to GameState for phase checking
             this.objectManager.gameState = this.gameState;
 
             // Setup callback for when simulation starts
             this.gameState.onSimulationStart = this.onSimulationStart.bind(this);
+
+            // Setup callback for when level ends (show popup)
+            this.gameState.onLevelEnd = this.onLevelEnd.bind(this);
+
+            // Setup popup button listeners
+            this.setupPopupListeners();
 
             // Setup callback for fish reaching goal
             this.sceneManager.onFishReachGoal = () => {
@@ -200,6 +206,119 @@ class FlockingFrenzy {
         console.log('✓ Fish and predators spawned - simulation active!');
     }
 
+    /**
+     * Called when level ends (win or lose)
+     * @param {boolean} isWin - Whether the player won
+     */
+    onLevelEnd(isWin) {
+        const nextLevelId = this.getNextLevelId();
+        const hasNextLevel = nextLevelId !== null;
+
+        this.ui.showGameEndPopup(this.gameState, isWin, hasNextLevel);
+    }
+
+    /**
+     * Setup popup button event listeners
+     */
+    setupPopupListeners() {
+        // Restart button in popup
+        this.ui.popupRestartBtn.addEventListener('click', () => {
+            this.ui.hideGameEndPopup();
+            this.gameState.restartLevel();
+            // Reset inventory for current level
+            this.objectManager.inventoryManager.setLevel(this.currentLevelId);
+            this.ui.renderInventoryHotbar();
+            console.log('✓ Level restarted from popup');
+        });
+
+        // Next level button in popup
+        this.ui.popupNextBtn.addEventListener('click', () => {
+            const nextLevelId = this.getNextLevelId();
+            if (nextLevelId) {
+                this.ui.hideGameEndPopup();
+                this.loadNewLevel(nextLevelId);
+                console.log(`✓ Loading next level: ${nextLevelId}`);
+            }
+        });
+    }
+
+    /**
+     * Get the next level ID based on current level
+     * @returns {string|null} Next level ID or null if no more levels
+     */
+    getNextLevelId() {
+        const allLevels = getAllLevelIds();
+        const currentIndex = allLevels.indexOf(this.currentLevelId);
+
+        if (currentIndex === -1 || currentIndex >= allLevels.length - 1) {
+            return null; // No next level
+        }
+
+        return allLevels[currentIndex + 1];
+    }
+
+    /**
+     * Load a new level by ID
+     * @param {string} levelId - Level identifier
+     */
+    loadNewLevel(levelId) {
+        const levelConfig = getLevelConfig(levelId);
+        if (!levelConfig) {
+            console.error(`Level config not found: ${levelId}`);
+            return;
+        }
+
+        // Update current level references
+        this.currentLevelId = levelId;
+        this.currentLevelConfig = levelConfig;
+
+        // Reset game state
+        this.gameState.phase = 'PREPARATION';
+        this.gameState.score = this.gameState.startingScore;
+        this.gameState.timeRemaining = levelConfig.maxTime;
+        this.gameState.timeElapsed = 0;
+
+        // Clear all objects and scene elements
+        if (this.objectManager) {
+            this.objectManager.clearAll();
+        }
+
+        if (this.sceneManager) {
+            this.sceneManager.clearFish();
+            this.sceneManager.clearPredators();
+            this.sceneManager.clearGoalZones();
+            this.sceneManager.clearSpawnZones();
+            this.sceneManager.removeGoalBait();
+            this.sceneManager.flockingSystem.clearBaits();
+        }
+
+        // Load new level config into game state
+        this.gameState.loadLevel(levelConfig, levelId);
+
+        // Set new inventory
+        this.objectManager.inventoryManager.setLevel(levelId);
+        this.ui.renderInventoryHotbar();
+
+        // Create new goal zone
+        const goalConfig = levelConfig.goalConfig;
+        this.sceneManager.createGoalZone(
+            goalConfig.position,
+            goalConfig.radius,
+            goalConfig.color
+        );
+
+        // Create new spawn zone
+        const fishConfig = levelConfig.fishConfig;
+        this.sceneManager.createSpawnZone(
+            fishConfig.spawnPosition,
+            fishConfig.spawnSpread,
+            0xff9900
+        );
+
+        console.log(`✓ Loaded level: ${levelConfig.name}`);
+        console.log('Place all items and press "Start Simulation" to begin!');
+    }
+
     setupEventListeners() {
         // Window resize
         window.addEventListener('resize', this.onWindowResize);
@@ -234,7 +353,11 @@ class FlockingFrenzy {
 
             case 'r':
                 // Restart level (works in any phase)
+                this.ui.hideGameEndPopup(); // Hide popup if visible
                 this.gameState.restartLevel();
+                // Reset inventory for current level
+                this.objectManager.inventoryManager.setLevel(this.currentLevelId);
+                this.ui.renderInventoryHotbar();
                 console.log('✓ Level restarted via R key');
                 break;
 
