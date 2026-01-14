@@ -53,7 +53,6 @@
   - [x] Goal seeking (attract to bait)
   - [x] Obstacle avoidance (rocks, spiked rocks)
   - [ ] Balık modeli ve animasyonu eklenecek
-  - [ ] FleeBehavior ekle köpek balığından kaçsınlar
 
 - [x] **Fish school (100+ entities)** - InstancedMesh for performance
   - [x] Fish entity class with position/velocity/acceleration
@@ -105,7 +104,6 @@
   - [x] Survival percentage calculation
   - [x] Timer enforcement (20 seconds)
   - [x] Victory condition: ≥60% fish reach goal
-  - [ ] Score bonus on win (+50 points)
 
 - [x] **Complete scoring integration**
   - [x] Fish death penalty (-10 points)
@@ -120,8 +118,6 @@
 
 ## Known Issues
 
-### Current
-- [ ] Missing favicon.ico (non-critical, browser warning only)
 
 ---
 
@@ -137,6 +133,8 @@
 
 - [x] item yerleştirme bug'ını çözmek
 
-- [ ] Köpek balığının obstacle avoidance'ı eklenecek
-- [ ] Balıkların köpek balığından kaçmasını yapcam
-- [ ] Yemleri duvarın dışına koyabiliyoruz, kötü
+- [ ] Köpek balığının obstacle avoidance'ı eklenecekz
+
+- [x] Yemleri duvarın dışına koyabiliyoruz, kötü
+
+- [ ] Yorum satırlarının falan temizlenmesi 
