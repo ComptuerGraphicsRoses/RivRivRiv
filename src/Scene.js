@@ -13,6 +13,8 @@ import {
 
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { Fish } from './Fish.js';
 import { FlockingSystem } from './FlockingSystem.js';
 import { GroundedSkybox } from 'three/addons/objects/GroundedSkybox.js';
@@ -633,16 +635,70 @@ export class SceneManager {
         console.log(`✓ Boundary visualization created: ${width}x${height}x${depth} at (0, ${centerY.toFixed(2)}, 0)`);
     }
 
-    createTeamNamesScene = () => {
-        // This will be located at a separate area (e.g., y = -50)
-        // For now, create placeholder text using 3D objects
-        const nameGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const nameMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    createTeamNamesScene = async () => {
+        // Text to display at position (20, 0, 0)
+        const textLines = [
+            'Flocking Frenzy', '-a game by-', 'Ahmet Toktas 2230356015', 'Sinan Ermis 2220356143', 'Dursun Zahid Korkmaz 2210356020', 'Berkay Orene 2210356017'
+        ];
 
-        // TODO: Replace with actual team member names using 3D text or assembled cubes
-        const namePlaceholder = new THREE.Mesh(nameGeometry, nameMaterial);
-        namePlaceholder.position.set(0, -50, 0);
-        this.scene.add(namePlaceholder);
+        const fontLoader = new FontLoader();
+
+        // Load the font and create text
+        fontLoader.load(
+            'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
+            (font) => {
+                const textMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xFF0000,
+                    emissive: 0xFF0000,
+                    emissiveIntensity: 0.3,
+                    roughness: 0.4,
+                    metalness: 0.2
+                });
+
+                const basePosition = new THREE.Vector3(60, 0, -5);
+                const lineHeight = 2;
+
+                textLines.forEach((text, index) => {
+                    //if (text.trim() === '') return; // Skip empty lines
+
+                    const textGeometry = new TextGeometry(text, {
+                        font: font,
+                        size: index === 0 ? 1.0 : 1.0, // Larger size for title
+                        depth: 0.3,
+                        curveSegments: 12,
+                        bevelEnabled: true,
+                        bevelThickness: 0.1,
+                        bevelSize: 0.05,
+                        bevelOffset: 0,
+                        bevelSegments: 5
+                    });
+
+                    // Center the text
+                    textGeometry.computeBoundingBox();
+                    const centerOffset = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
+
+                    const textMesh = new THREE.Mesh(textGeometry, textMaterial.clone());
+
+                    // Position text at (20, 0, 0) with vertical spacing
+                    textMesh.position.set(
+                        basePosition.x + centerOffset,
+                        basePosition.y,
+                        basePosition.z + (index * lineHeight)
+                    );
+
+                    textMesh.rotation.x = -Math.PI / 2;
+
+                    textMesh.castShadow = true;
+                    this.scene.add(textMesh);
+                });
+
+                console.log('✓ Team names scene created at (20, 0, 0)');
+            },
+            undefined,
+            (error) => {
+                console.error('Error loading font:', error);
+            }
+        );
     }
 
     /**

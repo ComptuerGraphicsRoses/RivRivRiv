@@ -55,7 +55,7 @@ export class CameraController {
         this.animationProgress = 0;
         this.savedPosition = null;
         this.savedRotation = null;
-        this.targetPosition = new THREE.Vector3(0, 20, 0); // Top-down view
+        this.targetPosition = new THREE.Vector3(60, 15, 0); // Top-down view
         this.targetRotation = new THREE.Euler(-Math.PI / 2, 0, 0); // Looking down
         
         // Setup controls
