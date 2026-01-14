@@ -397,14 +397,21 @@ export class ObjectManager {
         const position = this.camera.position.clone().add(
             direction.multiplyScalar(actualDistance)
         );
+
+        // Check if object requires ground placement (e.g., Rock3)
+        const objectTypeData = createObjectType(this.selectedShape);
+        if (objectTypeData.requiresGroundPlacement) {
+            position.y = 0; // Clamp to ground level
+        }
+
         this.previewObject.position.copy(position);
 
-        const moved = position.distanceTo(this._lastPreviewPos) > this._previewMoveThreshold;
-        if (forceCheck || moved) {
-            this._lastPreviewPos.copy(position);
-            const hasCollision = this.checkCollision(position);
-            this.updatePreviewColor(hasCollision);
-        }
+        //const moved = position.distanceTo(this._lastPreviewPos) > this._previewMoveThreshold;
+        //if (forceCheck || moved) {
+        //    this._lastPreviewPos.copy(position);
+        //    const hasCollision = this.checkCollision(position);
+        //    this.updatePreviewColor(hasCollision);
+        //}
 
         // Update preview spotlight position and target if it exists
         if (this.previewSpotlight && this.previewSpotlightTarget) {
@@ -520,11 +527,12 @@ export class ObjectManager {
         if (event.button === 0) { // Left click - place object
             if (!this.buildMode || !this.previewObject) return;
 
-            const hasCollision = this.checkCollision(this.previewObject.position);
-            if (hasCollision) {
-                console.log('Cannot place object here - collision detected!');
-                return;
-            }
+            // COLLISION DETECTION DISABLED FOR TESTING
+            // const hasCollision = this.checkCollision(this.previewObject.position);
+            // if (hasCollision) {
+            //     console.log('Cannot place object here - collision detected!');
+            //     return;
+            // }
             this.placeObject();
         } else if (event.button === 2) { // Right click - toggle rotation mode
             event.preventDefault();
@@ -718,6 +726,11 @@ export class ObjectManager {
         const position = this.previewObject.position.clone();
         const rotation = this.previewObject.rotation.clone();
         const scale = objectTypeData.fbxScale;
+
+        // Clamp to ground level if required
+        if (objectTypeData.requiresGroundPlacement) {
+            position.y = 0;
+        }
 
         console.log(`Placing FBX object at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
 

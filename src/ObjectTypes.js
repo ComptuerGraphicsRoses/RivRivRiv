@@ -42,9 +42,6 @@ export class Rock1 extends PlaceableObject {
         this.color = 0x8b7355; // Light brown
         this.previewColor = 0x00ff00;
 
-        // Rock1 attributes
-        this.isObstacle = true;
-
         // FBX model configuration
         this.usesFBXModel = true;
         this.fbxMeshPath = '../assets/models/kaya2.fbx';
@@ -69,9 +66,10 @@ export class Rock2 extends PlaceableObject {
         this.color = 0x696969; // Gray
         this.previewColor = 0x00ff00;
 
-        // Rock2 attributes - DANGEROUS!
-        this.isObstacle = true;
-        this.killsOnContact = true;
+        this.usesFBXModel = true;
+        this.fbxMeshPath = '../assets/models/SM_Rocks_09B.fbx';
+        this.fbxBoundariesPath = '../assets/models/RockColliderB.fbx';
+        this.fbxScale = new THREE.Vector3(0.02, 0.02, 0.02);
     }
 
     createGeometry() {
@@ -90,8 +88,13 @@ export class Rock3 extends PlaceableObject {
         this.color = 0x556b2f; // Olive green
         this.previewColor = 0x00ff00;
 
-        // Rock3 attributes
-        this.isObstacle = true;
+        this.usesFBXModel = true;
+        this.fbxMeshPath = '../assets/models/BigCoral.fbx';
+        this.fbxBoundariesPath = '../assets/models/BigCoralColliders.fbx';
+        this.fbxScale = new THREE.Vector3(0.04, 0.04, 0.04);
+
+        // Rock3 must be placed at ground level (y=0)
+        this.requiresGroundPlacement = true;
     }
 
     createGeometry() {
