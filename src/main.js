@@ -27,14 +27,14 @@ class FlockingFrenzy {
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        
+
         // Initialize subsystems
         this.camera = new CameraController(this.canvas);
         this.sceneManager = new SceneManager();
         this.shaderManager = new ShaderManager();
         this.ui = new UIManager();
         this.gameState = new GameState();
-        
+
         // Timing
         this.clock = new THREE.Clock();
         this.deltaTime = 0;
@@ -44,18 +44,19 @@ class FlockingFrenzy {
         this.currentLevelConfig = null;
 
 
-        
+
+
         // Setup event listeners
         this.setupEventListeners();
-        
+
         // Initialize game
         this.init();
     }
-    
+
     async init() {
         console.log('Initializing Flocking Frenzy...');
         console.log('Three.js Revision:', THREE.REVISION);
-        
+
         try {
             // Load level configuration
             this.currentLevelConfig = getLevelConfig(this.currentLevelId);
@@ -67,7 +68,7 @@ class FlockingFrenzy {
             // Load shaders
             await this.shaderManager.loadShaders();
             console.log('✓ Shaders loaded');
-            
+
             // Initialize scene with default shader
             await this.sceneManager.init(this.shaderManager);
             console.log('✓ Scene initialized');
@@ -173,7 +174,7 @@ class FlockingFrenzy {
             // Start render loop
             this.animate();
             console.log('✓ Render loop started');
-            
+
             console.log('Flocking Frenzy initialized successfully!');
             console.log('Place all items and press "Start Simulation" to begin!');
             console.log('Press H for help');
@@ -341,21 +342,21 @@ class FlockingFrenzy {
     setupEventListeners() {
         // Window resize
         window.addEventListener('resize', this.onWindowResize);
-        
+
         // Keyboard input
         window.addEventListener('keydown', this.onKeyDown);
-        
+
         // UI events will be handled by UIManager
     }
-    
+
     onWindowResize = () => {
         const width = window.innerWidth;
         const height = window.innerHeight;
-        
+
         this.camera.updateAspect(width / height);
         this.renderer.setSize(width, height);
     }
-    
+
     onKeyDown = (event) => {
         switch (event.key.toLowerCase()) {
             case 'enter':
@@ -393,12 +394,12 @@ class FlockingFrenzy {
                 this.sceneManager.updateShader(this.shaderManager);
                 console.log('Switched to Phong shader (realistic lighting)');
                 break;
-                
+
             case '2':
-                // Switch to Underwater shader
-                this.shaderManager.setActiveShader('underwater');
+                // Switch to Toon shader
+                this.shaderManager.setActiveShader('toon');
                 this.sceneManager.updateShader(this.shaderManager);
-                console.log('Switched to Underwater shader (stylized)');
+                console.log('Switched to Toon shader (cel-shading)');
                 break;
 
             case '3':
@@ -493,11 +494,11 @@ class FlockingFrenzy {
                 }
                 break;
         }
-        
+
         // Pass keyboard events to camera controller
         this.camera.onKeyDown(event);
     }
-    
+
     update(deltaTime) {
 
         // Update camera
@@ -510,7 +511,7 @@ class FlockingFrenzy {
 
         // Update game state
         this.gameState.update(deltaTime);
-        
+
         // Update UI
         this.ui.update(this.gameState);
 
@@ -526,16 +527,16 @@ class FlockingFrenzy {
             deltaTime
         );
     }
-    
+
     render() {
         this.renderer.render(this.sceneManager.scene, this.camera.camera);
     }
-    
+
     animate = () => {
         requestAnimationFrame(this.animate);
-        
+
         this.deltaTime = this.clock.getDelta();
-        
+
         this.update(this.deltaTime);
         this.render();
     }

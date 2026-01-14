@@ -46,9 +46,17 @@ export class SceneManager {
         // Callbacks
         this.onFishDeath = null; // Callback when fish dies
         this.onFishReachGoal = null; // Callback when fish reaches goal
+        // Store FBX models for shader switching
+        this.fbxModels = [];
+
+        // Store reference to shader manager
+        this.shaderManager = null;
     }
 
     init = async (shaderManager) => {
+        // Store shader manager reference
+        this.shaderManager = shaderManager;
+
         // Setup lighting
         this.setupLights();
 
@@ -82,8 +90,22 @@ export class SceneManager {
                 (fbx) => {
                     const baseScale = 0.05 * GAME_SCALE;
                     fbx.scale.set(baseScale, baseScale, baseScale);
-                    this.scene.add(fbx);
                     console.log(`✓ Scene.fbx loaded with textures (scale: ${GAME_SCALE}x)`);
+
+                    // Extract textures from the model before applying shaders
+                    const textures = this.extractTexturesFromModel(fbx);
+
+                    // Apply shader materials if shader manager is available
+                    if (this.shaderManager) {
+                        this.createShaderMaterialsForModel(fbx, textures);
+                        this.applyShaderToModel(fbx, this.shaderManager.activeShader);
+                    }
+
+                    // Store model reference for shader switching
+                    this.fbxModels.push(fbx);
+
+                    this.scene.add(fbx);
+                    console.log('✓ Scene.fbx loaded with shader materials');
                     resolve(fbx);
                 },
                 (progress) => {
@@ -94,6 +116,88 @@ export class SceneManager {
                     reject(error);
                 }
             );
+        });
+    }
+
+    /**
+     * Extract textures from FBX model's original materials
+     * @param {THREE.Group} fbx - The FBX model
+     * @returns {Map<string, THREE.Texture>} Map of mesh UUID to texture
+     */
+    extractTexturesFromModel = (fbx) => {
+        const textures = new Map();
+
+        fbx.traverse((child) => {
+            if (child.isMesh && child.material) {
+                // Handle both single material and material array
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                materials.forEach((material) => {
+                    // Check if material has a valid map (texture)
+                    if (material.map && material.map.isTexture) {
+                        textures.set(child.uuid, material.map);
+                    }
+                });
+            }
+        });
+
+        if (textures.size > 0) {
+            console.log(`✓ Extracted ${textures.size} textures from FBX model`);
+        } else {
+            console.log('ℹ No textures found in FBX model, using material colors');
+        }
+        return textures;
+    }
+
+    /**
+     * Create shader materials (phong and toon) for an FBX model
+     * @param {THREE.Group} fbx - The FBX model
+     * @param {Map<string, THREE.Texture>} textures - Map of mesh UUID to texture
+     */
+    createShaderMaterialsForModel = (fbx, textures) => {
+        if (!this.shaderManager) return;
+
+        // Store materials on the model's userData
+        fbx.userData.shaderMaterials = {
+            phong: new Map(),
+            toon: new Map()
+        };
+
+        fbx.traverse((child) => {
+            if (child.isMesh) {
+                const texture = textures.get(child.uuid) || null;
+
+                // Create phong material
+                const phongMaterial = this.shaderManager.createShaderMaterial('phong', texture);
+                fbx.userData.shaderMaterials.phong.set(child.uuid, phongMaterial);
+
+                // Create toon material
+                const toonMaterial = this.shaderManager.createShaderMaterial('toon', texture);
+                fbx.userData.shaderMaterials.toon.set(child.uuid, toonMaterial);
+            }
+        });
+
+        console.log('✓ Created shader materials for FBX model');
+    }
+
+    /**
+     * Apply a specific shader to an FBX model
+     * @param {THREE.Group} fbx - The FBX model
+     * @param {string} shaderName - 'phong' or 'toon'
+     */
+    applyShaderToModel = (fbx, shaderName) => {
+        if (!fbx.userData.shaderMaterials || !fbx.userData.shaderMaterials[shaderName]) {
+            console.warn('Shader materials not found for model');
+            return;
+        }
+
+        fbx.traverse((child) => {
+            if (child.isMesh) {
+                const material = fbx.userData.shaderMaterials[shaderName].get(child.uuid);
+                if (material) {
+                    child.material = material;
+                }
+            }
         });
     }
 
@@ -389,14 +493,35 @@ export class SceneManager {
 
     setupLights = () => {
         // Ambient light
-        this.lights.ambient = new THREE.AmbientLight(0x7296DD, 1.5);
+        this.lights.ambient = new THREE.AmbientLight(0x7296DD, 1.0);
         this.scene.add(this.lights.ambient);
 
         // Directional light (sun)
         this.lights.directional = new THREE.DirectionalLight(0xffffff, 1.0);
         this.lights.directional.position.set(5, 10, 5);
+        this.lights.directional.target.position.set(0, 0, 0);
         this.lights.directional.castShadow = true;
         this.scene.add(this.lights.directional);
+        const helper = new THREE.DirectionalLightHelper(this.lights.directional, 5);
+
+        this.scene.add(helper);
+        // Spotlight (BBM 412 requirement)
+        // this.lights.spotlight = new THREE.SpotLight(0xffffff, 2.0);
+        // this.lights.spotlight.position.set(0, 10, 0);
+        // this.lights.spotlight.angle = Math.PI / 6;
+        // this.lights.spotlight.penumbra = 0.2;
+        // this.lights.spotlight.decay = 2;
+        // this.lights.spotlight.distance = 50;
+        // this.lights.spotlight.castShadow = true;
+
+        // // Spotlight target
+        // this.lights.spotlight.target.position.set(0, 0, 0);
+        // this.scene.add(this.lights.spotlight);
+        // this.scene.add(this.lights.spotlight.target);
+
+        // // Helper for spotlight (for debugging)
+        // const spotLightHelper = new THREE.SpotLightHelper(this.lights.spotlight);
+        // this.scene.add(spotLightHelper);
     }
 
     createTestScene = () => {
@@ -1029,8 +1154,14 @@ export class SceneManager {
 
 
     updateShader = (shaderManager) => {
-        // This will be used to switch materials when shader changes
-        // For now using standard materials, will integrate custom shaders later
+        // Store shader manager reference
+        this.shaderManager = shaderManager;
+
+        // Apply shader to all stored FBX models
+        this.fbxModels.forEach(fbx => {
+            this.applyShaderToModel(fbx, shaderManager.activeShader);
+        });
+
         console.log('Scene shader updated to:', shaderManager.activeShader);
     }
 
