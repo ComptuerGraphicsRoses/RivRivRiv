@@ -143,6 +143,7 @@ export class SceneManager {
                     // Create GroundedSkybox with the loaded texture
                     this.skybox = new GroundedSkybox(texture, 15, 15);
                     this.skybox.position.y = 10; // Adjust height as needed
+                    this.skybox.scale.multiplyScalar(GAME_SCALE);
                     this.scene.add(this.skybox);
 
                     console.log('✓ Skybox loaded successfully');
