@@ -29,7 +29,7 @@ export class ObjectManager {
 
         // Preview distance control (scaled with world)
         this.previewDistance = 10 * GAME_SCALE;
-        this.minPreviewDistance = 3 * 1.5; // Reduced scale factor so objects can come closer
+        this.minPreviewDistance = 3 * 1.5 * GAME_SCALE; // Scale minimum distance with GAME_SCALE
         this.maxPreviewDistance = 30 * GAME_SCALE;
         this.distanceStep = 0.5 * GAME_SCALE;
 
@@ -413,6 +413,9 @@ export class ObjectManager {
                         parent = parent.parent;
                     }
                 }
+
+                // Exclude objects marked to ignore raycasting (boundaries, zones, etc.)
+                if (hit.object.userData.ignoreRaycast) return false;
 
                 return true;
             });

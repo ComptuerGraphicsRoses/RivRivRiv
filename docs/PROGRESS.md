@@ -139,3 +139,5 @@
   - [x] Köpek balığı sınırları aşamayacak
 
 - [ ] Balıkların köpek balığından kaçmasını yapcam
+- [ ] Köpek balığının obstacle avoidance'ı eklenecek
+- [ ] item yerleştirme bug'ını çözmek
