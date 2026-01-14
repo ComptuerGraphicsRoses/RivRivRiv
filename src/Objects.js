@@ -962,6 +962,12 @@ export class ObjectManager {
                 this.sceneManager.unregisterBait(obj);
             }
 
+            // Remove boundaries/colliders if they exist (for FBX objects)
+            if (obj.userData.boundaries && this.sceneManager) {
+                console.log(`Removing ${obj.userData.boundaries.length} boundary collider(s)...`);
+                this.sceneManager.removeObstacles(obj.userData.boundaries);
+            }
+
             this.scene.remove(obj);
 
             // Handle spotlight cleanup

@@ -179,6 +179,11 @@ export class FlockingSystem {
 
         // Check each bait against all fish
         for (const bait of this.baits) {
+            // Don't consume goal baits (they stay to guide fish)
+            if (bait.userData && bait.userData.isGoalBait) {
+                continue;
+            }
+
             for (const fish of this.fish) {
                 if (!fish.alive) continue;
 

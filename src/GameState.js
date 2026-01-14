@@ -140,6 +140,7 @@ export class GameState {
             this.sceneManager.clearPredators();
             this.sceneManager.clearGoalZones();
             this.sceneManager.clearSpawnZones();
+            this.sceneManager.removeGoalBait(); // Remove goal bait
             this.sceneManager.flockingSystem.clearBaits(); // Clear bait tracking
 
             // Recreate goal zone from level config
