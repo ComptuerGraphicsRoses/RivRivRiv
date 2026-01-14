@@ -144,7 +144,7 @@ export class SceneManager {
      * @param {THREE.Vector3} position - Position offset in world space
      * @param {THREE.Vector3} scale - Scale factors (default 0.01 for all axes)
      * @param {THREE.Euler} rotation - Rotation in radians (default no rotation)
-     * @returns {Promise<THREE.Group>} The loaded FBX object
+     * @returns {Promise<Array>} Array of boundary data objects {obstacle, wireframeMesh}
      */
     loadFBXBoundaries = async (filePath, position, scale = new THREE.Vector3(0.01, 0.01, 0.01), rotation = new THREE.Euler(0, 0, 0)) => {
         const loader = new FBXLoader();
@@ -154,6 +154,7 @@ export class SceneManager {
                 filePath,
                 (fbx) => {
                     let sphereCount = 0;
+                    const boundaryData = []; // Store boundary data for later removal
 
                     // Configuration for boundaries
                     const BOUNDARY_CONFIG = {
@@ -198,7 +199,8 @@ export class SceneManager {
 
                             if (isSphere) {
                                 const radius = boundingSphere.radius;
-                                this.addObstacle(worldPosition, radius, worldScale, worldQuaternion);
+                                const data = this.addObstacle(worldPosition, radius, worldScale, worldQuaternion);
+                                boundaryData.push(data); // Store for later removal
 
                                 sphereCount++;
                                 console.log(`✓ Added boundary: ${child.name} at (${worldPosition.x.toFixed(2)}, ${worldPosition.y.toFixed(2)}, ${worldPosition.z.toFixed(2)})`);
@@ -207,7 +209,7 @@ export class SceneManager {
                     });
 
                     console.log(`✓ FBX boundaries loaded: ${filePath} - Found ${sphereCount} sphere obstacles`);
-                    resolve(fbx);
+                    resolve(boundaryData); // Return boundary data instead of fbx
                 },
                 (progress) => {
                     //console.log(`Loading ${filePath}:`, (progress.loaded / progress.total * 100) + '%');
@@ -571,6 +573,7 @@ export class SceneManager {
 
     /**
      * Add obstacle for fish to avoid
+     * @returns {Object} Object containing obstacle and wireframe mesh references
      */
     addObstacle = (position, radius = 1.0, scale = new THREE.Vector3(1, 1, 1), rotation = new THREE.Quaternion()) => {
         const obstacle = {
@@ -599,7 +602,34 @@ export class SceneManager {
 
         console.log(`✓ Added obstacle at (${position.x}, ${position.y}, ${position.z}) with radius ${radius}`);
 
-        return obstacle;
+        // Return both obstacle and wireframe for later removal
+        return {
+            obstacle: obstacle,
+            wireframeMesh: wireframeMesh
+        };
+    }
+
+    /**
+     * Remove obstacles associated with a placed object
+     * @param {Array} boundaryData - Array of boundary data objects {obstacle, wireframeMesh}
+     */
+    removeObstacles = (boundaryData) => {
+        if (!boundaryData || !Array.isArray(boundaryData)) return;
+
+        let removedCount = 0;
+        for (const data of boundaryData) {
+            if (data.obstacle) {
+                this.flockingSystem.removeObstacle(data.obstacle);
+                removedCount++;
+            }
+            if (data.wireframeMesh) {
+                this.scene.remove(data.wireframeMesh);
+                if (data.wireframeMesh.geometry) data.wireframeMesh.geometry.dispose();
+                if (data.wireframeMesh.material) data.wireframeMesh.material.dispose();
+            }
+        }
+
+        console.log(`✓ Removed ${removedCount} obstacle(s) from flocking system`);
     }
 
     updateShader = (shaderManager) => {

@@ -39,6 +39,18 @@ export class FlockingSystem {
     }
     
     /**
+     * Remove an obstacle
+     */
+    removeObstacle(obstacle) {
+        const index = this.obstacles.indexOf(obstacle);
+        if (index > -1) {
+            this.obstacles.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Add a bait that fish will be attracted to
      */
     addBait(baitObject) {

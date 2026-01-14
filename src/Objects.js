@@ -500,35 +500,45 @@ export class ObjectManager {
         // Update raycaster
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
-        // Check for intersections with placed objects
-        const selectableObjects = this.placedObjects.filter(obj => {
-            // For spotlights, check their visual cone instead
-            if (obj.userData.type === 'spotlight') {
-                return obj.userData.visual;
-            }
-            return obj.isMesh;
-        }).map(obj => {
-            // Return visual cone for spotlights, regular object for others
-            return obj.userData.type === 'spotlight' ? obj.userData.visual : obj;
-        });
-
-        const intersects = this.raycaster.intersectObjects(selectableObjects, false);
+        // For FBX objects, we need to check recursively since they are Groups with mesh children
+        // Use recursive: true to check all descendants
+        const intersects = this.raycaster.intersectObjects(this.placedObjects, true);
 
         if (intersects.length > 0) {
             const clickedObject = intersects[0].object;
 
-            // Find the original placed object
+            // Find the original placed object (might be a parent of the clicked mesh)
             let selectedObject = null;
-            let selectedIndex = -1;  // ADD THIS LINE
-            for (let i = 0; i < this.placedObjects.length; i++) {  // CHANGE: use for loop with index
+            let selectedIndex = -1;
+
+            for (let i = 0; i < this.placedObjects.length; i++) {
                 const obj = this.placedObjects[i];
-                if (obj.isMesh && obj === clickedObject) {
+
+                // Direct match
+                if (obj === clickedObject) {
                     selectedObject = obj;
-                    selectedIndex = i;  // ADD THIS LINE
+                    selectedIndex = i;
                     break;
-                } else if (obj.userData.visual === clickedObject) {
+                }
+
+                // Check if clickedObject is a child of this placed object (for FBX groups)
+                if (obj.userData.isFBXModel) {
+                    let parent = clickedObject.parent;
+                    while (parent) {
+                        if (parent === obj) {
+                            selectedObject = obj;
+                            selectedIndex = i;
+                            break;
+                        }
+                        parent = parent.parent;
+                    }
+                    if (selectedObject) break;
+                }
+
+                // Check spotlight visual cone
+                if (obj.userData.visual === clickedObject) {
                     selectedObject = obj;
-                    selectedIndex = i;  // ADD THIS LINE
+                    selectedIndex = i;
                     break;
                 }
             }
@@ -568,6 +578,12 @@ export class ObjectManager {
         // Unregister bait from flocking system if it's a bait
         if (objectType === 'bait' && this.sceneManager) {
             this.sceneManager.unregisterBait(obj);
+        }
+
+        // Remove boundaries/colliders if they exist (for FBX objects)
+        if (obj.userData.boundaries && this.sceneManager) {
+            console.log(`Removing ${obj.userData.boundaries.length} boundary collider(s)...`);
+            this.sceneManager.removeObstacles(obj.userData.boundaries);
         }
 
         // Remove from scene
@@ -681,7 +697,7 @@ export class ObjectManager {
         // Load FBX mesh for placement
         loader.load(
             objectTypeData.fbxMeshPath,
-            (fbx) => {
+            async (fbx) => {
                 // Setup FBX as placed object
                 fbx.scale.copy(scale);
                 fbx.position.copy(position);
@@ -732,19 +748,23 @@ export class ObjectManager {
 
                 console.log(`✓ Placed FBX object ${this.selectedShape} #${this.placedObjects.length}`);
 
-                // Load boundaries if available
+                // Load boundaries if available and store reference
                 if (objectTypeData.fbxBoundariesPath && this.sceneManager) {
                     console.log(`Loading boundaries for ${this.selectedShape}...`);
-                    this.sceneManager.loadFBXBoundaries(
-                        objectTypeData.fbxBoundariesPath,
-                        position,
-                        scale,
-                        rotation
-                    ).then(() => {
-                        console.log(`✓ Boundaries loaded for ${this.selectedShape}`);
-                    }).catch((error) => {
+                    try {
+                        const boundaryData = await this.sceneManager.loadFBXBoundaries(
+                            objectTypeData.fbxBoundariesPath,
+                            position,
+                            scale,
+                            rotation
+                        );
+
+                        // Store boundary data in the FBX object for later removal
+                        fbx.userData.boundaries = boundaryData;
+                        console.log(`✓ Boundaries loaded and stored for ${this.selectedShape} (${boundaryData.length} colliders)`);
+                    } catch (error) {
                         console.error(`Error loading boundaries:`, error);
-                    });
+                    }
                 }
             },
             (progress) => {
