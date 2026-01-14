@@ -3,13 +3,16 @@
  * Based on Yuka's steering behaviors but adapted for Three.js
  */
 
+// Global game scale - scales the entire world (except fish size)
+export const GAME_SCALE = 2;
+
 // Hard boundary clamping - ENSURE fish never escape the play area
 // This is the safety net in case the boundary avoidance force isn't enough
-// Boundaries: X[-10,+10], Y[-1.5,5], Z[-10,+10]
-export const BOUNDARY_HALF_X = 10;
-export const BOUNDARY_MIN_Y = -0.5;
-export const BOUNDARY_MAX_Y = 5;
-export const BOUNDARY_HALF_Z = 10;
+// Base boundaries (before scaling): X[-10,+10], Y[-0.5,5], Z[-10,+10]
+export const BOUNDARY_HALF_X = 10 * GAME_SCALE;
+export const BOUNDARY_MIN_Y = -0.5 * GAME_SCALE;
+export const BOUNDARY_MAX_Y = 5 * GAME_SCALE;
+export const BOUNDARY_HALF_Z = 10 * GAME_SCALE;
 
 import * as THREE from 'three';
 

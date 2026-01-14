@@ -1,9 +1,10 @@
 // javascript
 // src/Objects.js - add scroll-controlled preview distance
+import { GAME_SCALE } from "./FlockingSystem.js";
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { InventoryManager } from './Inventory.js';
-import { createObjectType, getObjectAttributes } from './ObjectTypes.js';
+import { createObjectType } from './ObjectTypes.js';
 
 export class ObjectManager {
     constructor(scene, camera, canvas, sceneManager = null) {
@@ -21,15 +22,15 @@ export class ObjectManager {
         this.selectedShape = 'rock1'; // 'rock1', 'rock2', 'rock3', 'bait', 'spotlight'
 
         this.collidables = [];
-        this.minDistance = 1.5; // Minimum distance between placed objects
+        this.minDistance = 1.5 * GAME_SCALE; // Minimum distance between placed objects (scaled)
         this._lastPreviewPos = new THREE.Vector3();
         this._previewMoveThreshold = 0.05;
 
-        // Preview distance control
-        this.previewDistance = 10;
-        this.minPreviewDistance = 3;
-        this.maxPreviewDistance = 30;
-        this.distanceStep = 0.5;
+        // Preview distance control (scaled with world)
+        this.previewDistance = 10 * GAME_SCALE;
+        this.minPreviewDistance = 3 * 1.5; // Reduced scale factor so objects can come closer
+        this.maxPreviewDistance = 30 * GAME_SCALE;
+        this.distanceStep = 0.5 * GAME_SCALE;
 
         // Rotation control
         this.rotationMode = false;
@@ -125,8 +126,9 @@ export class ObjectManager {
                     this.previewObject.material.dispose();
                 }
 
-                // Setup FBX as preview object
-                fbx.scale.copy(objectType.fbxScale);
+                // Setup FBX as preview object (apply GAME_SCALE)
+                const scaledScale = objectType.fbxScale.clone().multiplyScalar(GAME_SCALE);
+                fbx.scale.copy(scaledScale);
 
                 // Make it semi-transparent for preview while preserving textures
                 fbx.traverse((child) => {
@@ -216,7 +218,7 @@ export class ObjectManager {
 
         window.addEventListener('mousemove', this.onMouseMove);
         window.addEventListener('click', this.onMouseClick);
-        window.addEventListener('wheel', this.onWheel, {passive: false});
+        window.addEventListener('wheel', this.onWheel, { passive: false });
         window.addEventListener('contextmenu', this.onContextMenu);
         window.addEventListener('keydown', this.onKeyDown);
         this.buildMode = true;
@@ -443,7 +445,7 @@ export class ObjectManager {
             // Update spotlight target based on rotation
             const direction = new THREE.Vector3(0, -1, 0);
             direction.applyEuler(this.previewRotation);
-            const targetDistance = 10;
+            const targetDistance = 10 * GAME_SCALE; // Scaled target distance
             this.previewSpotlightTarget.position.copy(position).add(direction.multiplyScalar(targetDistance));
         }
     }
@@ -698,8 +700,9 @@ export class ObjectManager {
         loader.load(
             objectTypeData.fbxMeshPath,
             async (fbx) => {
-                // Setup FBX as placed object
-                fbx.scale.copy(scale);
+                // Setup FBX as placed object (apply GAME_SCALE)
+                const scaledScale = scale.clone().multiplyScalar(GAME_SCALE);
+                fbx.scale.copy(scaledScale);
                 fbx.position.copy(position);
                 fbx.rotation.copy(rotation);
 

@@ -4,6 +4,7 @@
  */
 
 import {
+    GAME_SCALE,
     BOUNDARY_HALF_X, 
     BOUNDARY_MIN_Y,
     BOUNDARY_MAX_Y,
@@ -73,9 +74,10 @@ export class SceneManager {
             loader.load(
                 '../assets/models/Scene.fbx',
                 (fbx) => {
-                    fbx.scale.set(0.05, 0.05, 0.05);
+                    const baseScale = 0.05 * GAME_SCALE;
+                    fbx.scale.set(baseScale, baseScale, baseScale);
                     this.scene.add(fbx);
-                    console.log('✓ Scene.fbx loaded with textures');
+                    console.log(`✓ Scene.fbx loaded with textures (scale: ${GAME_SCALE}x)`);
                     resolve(fbx);
                 },
                 (progress) => {
@@ -104,11 +106,15 @@ export class SceneManager {
             loader.load(
                 filePath,
                 (fbx) => {
-                    fbx.scale.copy(scale);
-                    fbx.position.copy(position);
+                    // Apply GAME_SCALE to both scale and position
+                    const scaledScale = scale.clone().multiplyScalar(GAME_SCALE);
+                    const scaledPosition = position.clone().multiplyScalar(GAME_SCALE);
+                    
+                    fbx.scale.copy(scaledScale);
+                    fbx.position.copy(scaledPosition);
                     fbx.rotation.copy(rotation);
                     this.scene.add(fbx);
-                    console.log(`✓ FBX mesh loaded: ${filePath} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+                    console.log(`✓ FBX mesh loaded: ${filePath} at (${scaledPosition.x.toFixed(2)}, ${scaledPosition.y.toFixed(2)}, ${scaledPosition.z.toFixed(2)}) scale ${GAME_SCALE}x`);
                     resolve(fbx);
                 },
                 (progress) => {
@@ -189,7 +195,7 @@ export class SceneManager {
                             child.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
 
                             // Apply scale and position offset
-                            worldPosition.multiplyScalar(BOUNDARY_CONFIG.positionScale);
+                            worldPosition.multiplyScalar(BOUNDARY_CONFIG.positionScale * GAME_SCALE);
                             worldPosition.add(BOUNDARY_CONFIG.positionOffset);
                             worldScale.multiplyScalar(BOUNDARY_CONFIG.scaleMultiplier);
 
@@ -206,7 +212,7 @@ export class SceneManager {
                                 this.isSphereGeometry(geometry);
 
                             if (isSphere) {
-                                const radius = boundingSphere.radius;
+                                const radius = boundingSphere.radius * GAME_SCALE;
                                 const data = this.addObstacle(worldPosition, radius, worldScale, worldQuaternion);
                                 boundaryData.push(data); // Store for later removal
 
@@ -267,19 +273,15 @@ export class SceneManager {
     loadObstaclesFromFBX = async () => {
         const loader = new FBXLoader();
 
-        // Configuration for importing obstacles from Blender FBX
-        // TODO: These values should match the export settings from Blender
+        // Configuration for importing obstacles from Blender FBX (apply GAME_SCALE)
         const OBSTACLE_IMPORT_CONFIG = {
-            // Position scale factor (1.0 = no scaling)
-            positionScale: 0.01,
+            // Position scale factor (scaled by GAME_SCALE)
+            positionScale: 0.01 * GAME_SCALE,
 
-            // Position offset to align with Scene.fbx coordinate system
-            // Needed because ObstacleSpheres.fbx and Scene.fbx may have different origins
-            positionOffset: new THREE.Vector3(0, -1, 0),
+            // Position offset to align with Scene.fbx coordinate system (scaled)
+            positionOffset: new THREE.Vector3(0, -1, 0).multiplyScalar(GAME_SCALE),
 
-            // Scale multiplier to match Blender units
-            // 0.6 suggests a unit mismatch between Blender export and Three.js scene
-            // Check Blender Scene Properties > Units > Unit Scale
+            // Scale multiplier to match Blender units (scaled by GAME_SCALE)
             scaleMultiplier: 0.01
         };
 
@@ -320,9 +322,8 @@ export class SceneManager {
                                 this.isSphereGeometry(geometry);
 
                             if (isSphere) {
-                                // Use bounding sphere radius directly from geometry (local space)
-                                // The worldScale will handle the actual size transformation
-                                const radius = boundingSphere.radius;
+                                // Scale radius to match world scale
+                                const radius = boundingSphere.radius * GAME_SCALE;
 
                                 // Add as obstacle with ellipsoid scale and rotation
                                 // The obstacle will be: sphere with base radius, scaled by worldScale
@@ -439,7 +440,7 @@ export class SceneManager {
     }
 
     createGroundPlane() {
-        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundGeometry = new THREE.PlaneGeometry(100 * GAME_SCALE, 100 * GAME_SCALE);
 
         // Load sandy texture
         const textureLoader = new THREE.TextureLoader();
@@ -448,7 +449,7 @@ export class SceneManager {
         // Configure texture wrapping and repeat for better appearance
         sandyTexture.wrapS = THREE.RepeatWrapping;
         sandyTexture.wrapT = THREE.RepeatWrapping;
-        sandyTexture.repeat.set(20, 20); // Adjust repeat for better tiling
+        sandyTexture.repeat.set(20 * GAME_SCALE, 20 * GAME_SCALE); // Scaled with world
 
         const groundMaterial = new THREE.MeshStandardMaterial({
             map: sandyTexture,
