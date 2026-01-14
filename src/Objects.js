@@ -512,9 +512,23 @@ export class ObjectManager {
         // Update raycaster
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
+        // Build array of raycastable objects (meshes only, since raycaster can't intersect lights)
+        const raycastTargets = [];
+        for (const obj of this.placedObjects) {
+            if (obj.userData.type === 'spotlight') {
+                // For spotlights, raycast against the visual cone mesh
+                if (obj.userData.visual) {
+                    raycastTargets.push(obj.userData.visual);
+                }
+            } else {
+                // For regular objects and FBX models, use the object itself
+                raycastTargets.push(obj);
+            }
+        }
+
         // For FBX objects, we need to check recursively since they are Groups with mesh children
         // Use recursive: true to check all descendants
-        const intersects = this.raycaster.intersectObjects(this.placedObjects, true);
+        const intersects = this.raycaster.intersectObjects(raycastTargets, true);
 
         if (intersects.length > 0) {
             const clickedObject = intersects[0].object;
@@ -525,6 +539,26 @@ export class ObjectManager {
 
             for (let i = 0; i < this.placedObjects.length; i++) {
                 const obj = this.placedObjects[i];
+
+                // Check spotlight visual cone (direct match or parent)
+                if (obj.userData.type === 'spotlight' && obj.userData.visual) {
+                    if (obj.userData.visual === clickedObject) {
+                        selectedObject = obj;
+                        selectedIndex = i;
+                        break;
+                    }
+                    // Check if clickedObject is a child of the visual cone
+                    let parent = clickedObject.parent;
+                    while (parent) {
+                        if (parent === obj.userData.visual) {
+                            selectedObject = obj;
+                            selectedIndex = i;
+                            break;
+                        }
+                        parent = parent.parent;
+                    }
+                    if (selectedObject) break;
+                }
 
                 // Direct match
                 if (obj === clickedObject) {
@@ -545,13 +579,6 @@ export class ObjectManager {
                         parent = parent.parent;
                     }
                     if (selectedObject) break;
-                }
-
-                // Check spotlight visual cone
-                if (obj.userData.visual === clickedObject) {
-                    selectedObject = obj;
-                    selectedIndex = i;
-                    break;
                 }
             }
 
@@ -954,7 +981,59 @@ export class ObjectManager {
      * Clear all placed objects and reset inventory counts
      */
     clearAll() {
-        this.dispose();
+        this.exitBuildMode();
+
+        this.placedObjects.forEach(obj => {
+            // Unregister bait from flocking system if it's a bait
+            if (obj.userData.type === 'bait' && this.sceneManager) {
+                this.sceneManager.unregisterBait(obj);
+            }
+
+            // Remove boundaries/colliders if they exist (for FBX objects)
+            if (obj.userData.boundaries && this.sceneManager) {
+                console.log(`Removing ${obj.userData.boundaries.length} boundary collider(s)...`);
+                this.sceneManager.removeObstacles(obj.userData.boundaries);
+            }
+
+            this.scene.remove(obj);
+
+            // Handle spotlight cleanup
+            if (obj.userData.type === 'spotlight') {
+                if (obj.userData.visual) {
+                    this.scene.remove(obj.userData.visual);
+                    if (obj.userData.visual.geometry) obj.userData.visual.geometry.dispose();
+                    if (obj.userData.visual.material) obj.userData.visual.material.dispose();
+                }
+                if (obj.userData.target) this.scene.remove(obj.userData.target);
+            }
+
+            // Handle FBX model cleanup
+            if (obj.userData.isFBXModel) {
+                obj.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.geometry) child.geometry.dispose();
+
+                        // Handle both single materials and material arrays
+                        if (child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(mat => {
+                                    if (mat && mat.dispose) mat.dispose();
+                                });
+                            } else if (child.material.dispose) {
+                                child.material.dispose();
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Handle regular object cleanup
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) obj.material.dispose();
+            }
+        });
+        this.placedObjects = [];
+        this.collidables = [];
+
         this.inventoryManager.resetCounts();
         console.log('All objects cleared, inventory reset');
     }
