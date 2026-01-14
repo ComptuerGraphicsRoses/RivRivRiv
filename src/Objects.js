@@ -35,6 +35,7 @@ export class ObjectManager {
         this.rotationMode = false;
         this.rotationSensitivity = 0.01;
         this.previewRotation = new THREE.Euler(0, 0, 0);
+        this.zRotationStep = 0.1; // Step size for Q/E key rotation around Z-axis
 
         // Spotlight intensity control
         this.spotlightIntensity = 6.0; // Default intensity
@@ -217,6 +218,7 @@ export class ObjectManager {
         window.addEventListener('click', this.onMouseClick);
         window.addEventListener('wheel', this.onWheel, {passive: false});
         window.addEventListener('contextmenu', this.onContextMenu);
+        window.addEventListener('keydown', this.onKeyDown);
         this.buildMode = true;
     }
 
@@ -266,6 +268,7 @@ export class ObjectManager {
         window.removeEventListener('click', this.onMouseClick);
         window.removeEventListener('wheel', this.onWheel);
         window.removeEventListener('contextmenu', this.onContextMenu);
+        window.removeEventListener('keydown', this.onKeyDown);
         this.rotationMode = false;
         this.buildMode = false;
     }
@@ -293,6 +296,29 @@ export class ObjectManager {
     onContextMenu(event) {
         // Prevent default right-click context menu in build mode
         event.preventDefault();
+    }
+
+    onKeyDown = (event) => {
+        if (!this.buildMode || !this.previewObject) return;
+
+        const objectTypeData = createObjectType(this.selectedShape);
+
+        // Q and E keys for Z-axis rotation (roll) - only for regular objects
+        if (event.key.toLowerCase() === 'q') {
+            // Don't allow Z-axis rotation for spotlight or ground-placement objects
+            if (!objectTypeData.requiresGroundPlacement) {
+                this.previewRotation.z -= this.zRotationStep; // Rotate counter-clockwise
+                this.previewObject.rotation.copy(this.previewRotation);
+                event.preventDefault();
+            }
+        } else if (event.key.toLowerCase() === 'e') {
+            // Don't allow Z-axis rotation for spotlight or ground-placement objects
+            if (!objectTypeData.requiresGroundPlacement) {
+                this.previewRotation.z += this.zRotationStep; // Rotate clockwise
+                this.previewObject.rotation.copy(this.previewRotation);
+                event.preventDefault();
+            }
+        }
     }
 
     createGeometry(shape) {
@@ -428,13 +454,7 @@ export class ObjectManager {
             // Check if object requires ground placement (only Y-axis rotation)
             const objectTypeData = createObjectType(this.selectedShape);
 
-            if (this.selectedShape === 'spotlight') {
-                // For spotlight/cone: use Z and X axes instead of Y and X
-                // Mouse X controls Z-axis (sideways tilt)
-                // Mouse Y controls X-axis (forward/backward tilt)
-                this.previewRotation.z += event.movementX * this.rotationSensitivity;
-                this.previewRotation.x += event.movementY * this.rotationSensitivity;
-            } else if (objectTypeData.requiresGroundPlacement) {
+            if (objectTypeData.requiresGroundPlacement) {
                 // For ground-placed objects (e.g., Rock3): only rotate around Y-axis
                 this.previewRotation.y += event.movementX * this.rotationSensitivity;
                 // Ignore vertical mouse movement (no X-axis rotation)

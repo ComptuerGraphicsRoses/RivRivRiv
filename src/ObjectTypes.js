@@ -15,11 +15,6 @@ export class PlaceableObject {
         this.size = 2;
         this.color = 0x8b7355;
         this.previewColor = 0x00ff00;
-
-        // Common properties
-        this.isObstacle = false;
-        this.isAttractive = false;
-        this.killsOnContact = false;
     }
 
     /**
@@ -32,7 +27,7 @@ export class PlaceableObject {
 }
 
 /**
- * Rock1 - Small rock obstacle (uses FBX model)
+ * Rock1 - Small rock
  */
 export class Rock1 extends PlaceableObject {
     constructor() {
@@ -56,7 +51,7 @@ export class Rock1 extends PlaceableObject {
 }
 
 /**
- * Rock2 - Spiky rock that kills on contact
+ * Rock2 - Big Rock
  */
 export class Rock2 extends PlaceableObject {
     constructor() {
@@ -78,7 +73,7 @@ export class Rock2 extends PlaceableObject {
 }
 
 /**
- * Rock3 - Large rock that provides shelter
+ * Rock3 - Large Coral
  */
 export class Rock3 extends PlaceableObject {
     constructor() {

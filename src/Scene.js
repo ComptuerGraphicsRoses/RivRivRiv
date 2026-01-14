@@ -379,24 +379,6 @@ export class SceneManager {
         this.lights.directional.position.set(5, 10, 5);
         this.lights.directional.castShadow = true;
         this.scene.add(this.lights.directional);
-
-        // Spotlight (BBM 412 requirement)
-        this.lights.spotlight = new THREE.SpotLight(0xffffff, 2.0);
-        this.lights.spotlight.position.set(0, 10, 0);
-        this.lights.spotlight.angle = Math.PI / 6;
-        this.lights.spotlight.penumbra = 0.2;
-        this.lights.spotlight.decay = 2;
-        this.lights.spotlight.distance = 50;
-        this.lights.spotlight.castShadow = true;
-
-        // Spotlight target
-        this.lights.spotlight.target.position.set(0, 0, 0);
-        this.scene.add(this.lights.spotlight);
-        this.scene.add(this.lights.spotlight.target);
-
-        // Helper for spotlight (for debugging)
-        const spotLightHelper = new THREE.SpotLightHelper(this.lights.spotlight);
-        this.scene.add(spotLightHelper);
     }
 
     createTestScene = () => {
