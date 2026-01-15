@@ -1,8 +1,3 @@
-/**
- * Shader Manager
- * Loads and manages GLSL shader programs with runtime switching
- */
-
 import * as THREE from 'three';
 
 export class ShaderManager {
@@ -13,21 +8,21 @@ export class ShaderManager {
                 fragment: null,
                 material: null,
                 uniforms: null,
-                materials: [] // Track all created materials for this shader
+                materials: []
             },
             toon: {
                 vertex: null,
                 fragment: null,
                 material: null,
                 uniforms: null,
-                materials: [] // Track all created materials for this shader
+                materials: []
             },
             underwater: {
                 vertex: null,
                 fragment: null,
                 material: null,
                 uniforms: null,
-                materials: [] // Track all created materials for this shader
+                materials: []
             }
         };
 
@@ -36,7 +31,6 @@ export class ShaderManager {
     }
 
     loadShaders = async () => {
-        // Load Phong shaders
         const phongVert = await this.loadShaderFile('./shaders/phong.vert.glsl');
         const phongFrag = await this.loadShaderFile('./shaders/phong.frag.glsl');
 
@@ -44,7 +38,6 @@ export class ShaderManager {
         this.shaders.phong.fragment = phongFrag;
         this.shaders.phong.uniforms = this.createPhongUniforms();
 
-        // Load Toon shaders
         const toonVert = await this.loadShaderFile('./shaders/toon.vert.glsl');
         const toonFrag = await this.loadShaderFile('./shaders/toon.frag.glsl');
 
@@ -52,7 +45,6 @@ export class ShaderManager {
         this.shaders.toon.fragment = toonFrag;
         this.shaders.toon.uniforms = this.createToonUniforms();
 
-        // Load Underwater shaders
         const underwaterVert = await this.loadShaderFile('./shaders/underwater.vert.glsl');
         const underwaterFrag = await this.loadShaderFile('./shaders/underwater.frag.glsl');
 
@@ -166,7 +158,7 @@ export class ShaderManager {
             hasTexture: { value: false },
 
             // Underwater specific
-            waterColor: { value: new THREE.Color(0x0a3040) },     // Deep water fog color (slightly brighter)
+            waterColor: { value: new THREE.Color(0x0a3040) },    // Deep water fog color (slightly brighter)
             shallowColor: { value: new THREE.Color(0x4a9eb8) },   // Shallow water tint
             fogDensity: { value: 1.2 },                           // Fog intensity multiplier
             fogStart: { value: 5.0 },                             // Distance where fog starts (closer)
@@ -199,12 +191,6 @@ export class ShaderManager {
         return shader.material;
     }
 
-    /**
-     * Create a shader material for a specific shader type with optional texture
-     * @param {string} shaderName - 'phong' or 'toon'
-     * @param {THREE.Texture} texture - Optional texture to apply
-     * @returns {THREE.ShaderMaterial} The created shader material
-     */
     createShaderMaterial = (shaderName, texture = null) => {
         const shader = this.shaders[shaderName];
         if (!shader) {
@@ -215,7 +201,6 @@ export class ShaderManager {
         // Clone uniforms to avoid sharing references
         const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
 
-        // Set texture if provided
         if (texture) {
             uniforms.map.value = texture;
             uniforms.hasTexture.value = true;
@@ -237,27 +222,22 @@ export class ShaderManager {
     updateUniforms = (camera, lights, deltaTime) => {
         this.time += deltaTime;
 
-        // Helper function to update uniforms for a shader and all its materials
         const updateShaderUniforms = (shader, lights) => {
             if (!shader.uniforms) return;
 
-            // Prepare uniform updates
             const updates = {};
 
-            // Sync ambient light
             if (lights.ambient) {
                 updates.ambientColor = lights.ambient.color;
                 updates.ambientIntensity = lights.ambient.intensity;
             }
 
-            // Sync directional light
             if (lights.directional) {
                 updates.directionalLightDir = lights.directional.position.clone().normalize();
                 updates.directionalLightColor = lights.directional.color;
                 updates.directionalLightIntensity = lights.directional.intensity;
             }
 
-            // Sync spotlight
             if (lights.spotlight) {
                 updates.spotLightEnabled = true;
                 updates.spotLightPosition = lights.spotlight.position;
@@ -302,13 +282,8 @@ export class ShaderManager {
             });
         };
 
-        // Update Phong shader and all its materials
         updateShaderUniforms(this.shaders.phong, lights);
-
-        // Update Toon shader and all its materials
         updateShaderUniforms(this.shaders.toon, lights);
-
-        // Update Underwater shader and all its materials
         updateShaderUniforms(this.shaders.underwater, lights);
     }
 }
