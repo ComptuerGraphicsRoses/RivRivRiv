@@ -719,9 +719,6 @@ export class SceneManager {
                 (fbx) => {
                     console.log('✓ koifish.fbx model loaded for spawning');
 
-                    // Extract textures from the base model
-                    const textures = this.extractTexturesFromModel(fbx);
-
                     for (let i = 0; i < count; i++) {
                         // Create fish entity
                         const fish = new Fish();
@@ -749,6 +746,9 @@ export class SceneManager {
 
                         // Rotate to point forward (like the cone did)
                         fishMesh.rotation.y = Math.PI / 2;
+
+                        // Extract textures from THIS cloned mesh (important: clones have different UUIDs)
+                        const textures = this.extractTexturesFromModel(fishMesh);
 
                         // Create shader materials for the fish (phong and toon)
                         this.createShaderMaterialsForModel(fishMesh, textures);
