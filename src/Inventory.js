@@ -1,8 +1,3 @@
-/**
- * Inventory System
- * Manages level-based object placement limits
- */
-
 import { LEVEL_CONFIGS } from './LevelConfig.js';
 
 // Convert level configs to inventory format
@@ -11,21 +6,13 @@ for (const [levelId, config] of Object.entries(LEVEL_CONFIGS)) {
     LEVEL_INVENTORIES[levelId] = config.inventory;
 }
 
-/**
- * InventoryManager - Tracks and validates object placement against level limits
- */
 export class InventoryManager {
     constructor() {
-        // Track how many of each object type have been placed per level
         this.placedCounts = {};
-        this.currentLevel = 'level1'; // Default level
-
+        this.currentLevel = 'level1';
         this.resetCounts();
     }
 
-    /**
-     * Reset all placement counts to zero
-     */
     resetCounts() {
         this.placedCounts = {
             rock1: 0,
@@ -36,10 +23,6 @@ export class InventoryManager {
         };
     }
 
-    /**
-     * Set the current level
-     * @param {string} levelId - Level identifier (e.g., 'level1')
-     */
     setLevel(levelId) {
         if (!LEVEL_INVENTORIES[levelId]) {
             console.warn(`Unknown level: ${levelId}, defaulting to level1`);
@@ -50,11 +33,6 @@ export class InventoryManager {
         this.resetCounts();
     }
 
-    /**
-     * Check if a specific object type can still be placed
-     * @param {string} objectType - Type of object (rock1, rock2, rock3, bait, spotlight)
-     * @returns {boolean} - True if can place, false if limit reached
-     */
     canPlace(objectType) {
         const levelConfig = LEVEL_INVENTORIES[this.currentLevel];
 
@@ -73,11 +51,6 @@ export class InventoryManager {
         return placed < limit;
     }
 
-    /**
-     * Get remaining count for an object type
-     * @param {string} objectType - Type of object
-     * @returns {number} - Remaining count
-     */
     getRemaining(objectType) {
         const levelConfig = LEVEL_INVENTORIES[this.currentLevel];
         if (!levelConfig) return 0;
@@ -87,21 +60,12 @@ export class InventoryManager {
         return Math.max(0, limit - placed);
     }
 
-    /**
-     * Get total limit for an object type
-     * @param {string} objectType - Type of object
-     * @returns {number} - Total limit
-     */
     getLimit(objectType) {
         const levelConfig = LEVEL_INVENTORIES[this.currentLevel];
         if (!levelConfig) return 0;
         return levelConfig[objectType] || 0;
     }
 
-    /**
-     * Record that an object has been placed
-     * @param {string} objectType - Type of object placed
-     */
     recordPlacement(objectType) {
         if (!this.placedCounts[objectType]) {
             this.placedCounts[objectType] = 0;
@@ -111,10 +75,6 @@ export class InventoryManager {
         console.log(`Placed ${objectType}: ${this.placedCounts[objectType]}/${this.getLimit(objectType)}`);
     }
 
-    /**
-     * Record that an object has been removed (returns to inventory)
-     * @param {string} objectType - Type of object removed
-     */
     recordRemoval(objectType) {
         if (!this.placedCounts[objectType]) {
             this.placedCounts[objectType] = 0;
@@ -128,18 +88,10 @@ export class InventoryManager {
         }
     }
 
-    /**
-     * Get current placement counts
-     * @returns {object} - Current counts
-     */
     getCounts() {
         return { ...this.placedCounts };
     }
 
-    /**
-     * Get full inventory status for current level
-     * @returns {object} - Inventory status with limits and remaining
-     */
     getInventoryStatus() {
         const levelConfig = LEVEL_INVENTORIES[this.currentLevel];
         const status = {};
