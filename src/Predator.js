@@ -1,6 +1,5 @@
-// Predator.js
 import {
-    BOUNDARY_HALF_X, 
+    BOUNDARY_HALF_X,
     BOUNDARY_MIN_Y,
     BOUNDARY_MAX_Y,
     BOUNDARY_HALF_Z,
@@ -32,19 +31,19 @@ export default class Predator {
     }
 
 
-    /* ---------------- UPDATE ---------------- */
+    // ---------------- UPDATE ----------------
 
     update(deltaTime, fishes) {
         let targetFish = this.findClosestFish(fishes);
 
         if (targetFish) {
-            // 🎯 Avlanma
+            // Avlanma
             const seekForce = this.seek(targetFish.position);
             this.applyForce(seekForce);
 
             this.tryToEat(targetFish);
         } else {
-            // 🐾 Gezinme
+            // Gezinme
             const wanderForce = this.wander();
             this.applyForce(wanderForce);
         }
@@ -65,14 +64,13 @@ export default class Predator {
         }
 
         this.position.addScaledVector(this.velocity, deltaTime);
-        
+
         // Clamp predator position to boundaries (same as fish boundaries)
-        // Boundaries: X[-10,+10], Y[-0.5,5], Z[-10,+10]
         this.position.x = Math.max(-BOUNDARY_HALF_X, Math.min(BOUNDARY_HALF_X, this.position.x));
         this.position.y = Math.max(BOUNDARY_MIN_Y, Math.min(BOUNDARY_MAX_Y, this.position.y));
         this.position.z = Math.max(-BOUNDARY_HALF_Z, Math.min(BOUNDARY_HALF_Z, this.position.z));
 
-        // 🪨 Obstacle collision correction (safety net)
+        // Obstacle collision correction (safety net)
         if (this.flockingSystem) {
             this.flockingSystem.correctPredatorObstacleCollisions(this);
         }
@@ -80,7 +78,7 @@ export default class Predator {
         this.acceleration.set(0, 0, 0);
     }
 
-    /* ---------------- AI BEHAVIORS ---------------- */
+    // ---------------- AI BEHAVIORS ----------------
 
     findClosestFish(fishes) {
         let closest = null;
@@ -146,6 +144,6 @@ export default class Predator {
     }
 
     applyForce(force) {
-        this.acceleration.add(force); 
+        this.acceleration.add(force);
     }
 }

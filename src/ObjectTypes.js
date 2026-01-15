@@ -1,15 +1,7 @@
-/**
- * ObjectTypes.js
- * Class-based object type definitions with attributes
- * Makes it easy for Fish.js and other systems to identify object properties
- */
-
 import { GAME_SCALE } from "./FlockingSystem.js";
 import * as THREE from 'three';
 
-/**
- * Base class for all placeable objects
- */
+// Base class for objects
 export class PlaceableObject {
     constructor() {
         this.type = 'generic';
@@ -18,18 +10,11 @@ export class PlaceableObject {
         this.previewColor = 0x00ff00;
     }
 
-    /**
-     * Create Three.js geometry for this object type
-     * @returns {THREE.BufferGeometry}
-     */
     createGeometry() {
         return new THREE.BoxGeometry(this.size * GAME_SCALE, this.size * GAME_SCALE, this.size * GAME_SCALE);
     }
 }
 
-/**
- * Rock1 - Small rock
- */
 export class Rock1 extends PlaceableObject {
     constructor() {
         super();
@@ -38,7 +23,7 @@ export class Rock1 extends PlaceableObject {
         this.color = 0x8b7355; // Light brown
         this.previewColor = 0x00ff00;
 
-        // FBX model configuration
+        // Model settings
         this.usesFBXModel = true;
         this.fbxMeshPath = '../assets/models/kaya2.fbx';
         this.fbxBoundariesPath = '../assets/models/kaya2Boundaries.fbx';
@@ -46,14 +31,11 @@ export class Rock1 extends PlaceableObject {
     }
 
     createGeometry() {
-        // Fallback geometry for preview placeholder
+        // Placeholder geometry
         return new THREE.BoxGeometry(2 * GAME_SCALE, 2 * GAME_SCALE, 2 * GAME_SCALE);
     }
 }
 
-/**
- * Rock2 - Big Rock
- */
 export class Rock2 extends PlaceableObject {
     constructor() {
         super();
@@ -73,9 +55,6 @@ export class Rock2 extends PlaceableObject {
     }
 }
 
-/**
- * Rock3 - Large Coral
- */
 export class Rock3 extends PlaceableObject {
     constructor() {
         super();
@@ -89,7 +68,6 @@ export class Rock3 extends PlaceableObject {
         this.fbxBoundariesPath = '../assets/models/BigCoralColliders.fbx';
         this.fbxScale = new THREE.Vector3(0.05, 0.05, 0.05);
 
-        // Rock3 must be placed at ground level (y=0)
         this.requiresGroundPlacement = true;
     }
 
@@ -98,9 +76,6 @@ export class Rock3 extends PlaceableObject {
     }
 }
 
-/**
- * Bait - Attracts fish
- */
 export class Bait extends PlaceableObject {
     constructor() {
         super();
@@ -115,9 +90,6 @@ export class Bait extends PlaceableObject {
     }
 }
 
-/**
- * Spotlight - Illuminates area
- */
 export class Spotlight extends PlaceableObject {
     constructor() {
         super();
@@ -132,11 +104,6 @@ export class Spotlight extends PlaceableObject {
     }
 }
 
-/**
- * Factory function to create object type instances
- * @param {string} shape - Object type identifier
- * @returns {PlaceableObject} Instance of the appropriate object type class
- */
 export function createObjectType(shape) {
     switch (shape) {
         case 'rock1': return new Rock1();
@@ -150,13 +117,7 @@ export function createObjectType(shape) {
     }
 }
 
-/**
- * Get object attributes from a Three.js object's userData
- * @param {THREE.Object3D} threeObject - The Three.js object to query
- * @returns {PlaceableObject|null} Object attributes or null
- */
 export function getObjectAttributes(threeObject) {
     if (!threeObject || !threeObject.userData) return null;
     return threeObject.userData.attributes || null;
 }
-

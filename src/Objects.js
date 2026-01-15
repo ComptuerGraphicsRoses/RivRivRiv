@@ -1,5 +1,3 @@
-// javascript
-// src/Objects.js - add scroll-controlled preview distance
 import { GAME_SCALE, BOUNDARY_HALF_X, BOUNDARY_HALF_Z, BOUNDARY_MIN_Y, BOUNDARY_MAX_Y } from "./FlockingSystem.js";
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
@@ -11,83 +9,71 @@ export class ObjectManager {
         this.scene = scene;
         this.camera = camera;
         this.canvas = canvas;
-        this.sceneManager = sceneManager; // Reference to SceneManager for bait registration
-        this.shaderManager = shaderManager; // Reference to ShaderManager for creating shader materials
-        this.gameState = null; // Reference to GameState for phase checking
+        this.sceneManager = sceneManager;
+        this.shaderManager = shaderManager;
+        this.gameState = null;
 
         this.placedObjects = [];
         this.previewObject = null;
-        this.previewSpotlight = null; // Preview spotlight light in build mode
-        this.previewSpotlightTarget = null; // Target for preview spotlight
+        this.previewSpotlight = null;
+        this.previewSpotlightTarget = null;
         this.buildMode = false;
 
-        this.selectedShape = 'rock1'; // 'rock1', 'rock2', 'rock3', 'bait', 'spotlight'
+        this.selectedShape = 'rock1';
 
         this.collidables = [];
-        this.minDistance = 1.5 * GAME_SCALE; // Minimum distance between placed objects (scaled)
+        this.minDistance = 1.5 * GAME_SCALE;
         this._lastPreviewPos = new THREE.Vector3();
         this._previewMoveThreshold = 0.05;
 
-        // Preview distance control (scaled with world)
+        // Preview distance settings
         this.previewDistance = 10 * GAME_SCALE;
-        this.minPreviewDistance = 3 * 1.5 * GAME_SCALE; // Scale minimum distance with GAME_SCALE
+        this.minPreviewDistance = 3 * 1.5 * GAME_SCALE;
         this.maxPreviewDistance = 30 * GAME_SCALE;
         this.distanceStep = 0.5 * GAME_SCALE;
 
-        // Rotation control
+        // Rotation settings
         this.rotationMode = false;
         this.rotationSensitivity = 0.01;
         this.previewRotation = new THREE.Euler(0, 0, 0);
-        this.zRotationStep = 0.1; // Step size for Q/E key rotation around Z-axis
+        this.zRotationStep = 0.1;
 
-        // Spotlight intensity control
-        this.spotlightIntensity = 6.0; // Default intensity
+        // Spotlight settings
+        this.spotlightIntensity = 6.0;
         this.minSpotlightIntensity = 1.0;
         this.maxSpotlightIntensity = 20.0;
         this.intensityStep = 0.5;
 
-        // Initialize inventory manager
         this.inventoryManager = new InventoryManager();
-        this.inventoryManager.setLevel('level1'); // Assume level1 for now
+        this.inventoryManager.setLevel('level1');
 
-        // Initialize inventory manager
-        this.inventoryManager = new InventoryManager();
-        this.inventoryManager.setLevel('level1'); // Assume level1 for now
-
-        // Flag to prevent immediate placement after selecting an object
         this.justSelectedObject = false;
 
-        // Raycaster for object selection when not in build mode
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
+
+        // Bindings
         this.onCanvasClick = this.onCanvasClick.bind(this);
-
-        // Add global click listener for object selection
-        this.canvas.addEventListener('click', this.onCanvasClick);
-
-        // Callback for inventory changes
-        this.onInventoryChange = null;
-
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onMouseClick = this.onMouseClick.bind(this);
         this.onWheel = this.onWheel.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
+
+        this.canvas.addEventListener('click', this.onCanvasClick);
+        this.onInventoryChange = null;
     }
 
     toggleBuildModeWithShape(shape) {
-        // Validate shape parameter
         if (!shape) {
             console.error('toggleBuildModeWithShape called with invalid shape:', shape);
             return false;
         }
 
-        // Prevent build mode during simulation or evaluation phases
         if (this.gameState && this.gameState.phase !== 'PREPARATION') {
             console.log('Cannot place objects during simulation - press R to restart');
             return false;
         }
 
-        // Check inventory before allowing build mode
         if (!this.inventoryManager.canPlace(shape)) {
             const limit = this.inventoryManager.getLimit(shape);
             console.log(`Cannot place ${shape}: limit reached (${limit}/${limit} used)`);
@@ -104,14 +90,10 @@ export class ObjectManager {
         return this.buildMode;
     }
 
-    /**
-     * Load FBX model for build mode preview
-     * @param {PlaceableObject} objectType - Object type with FBX configuration
-     */
     loadFBXPreview(objectType) {
         const loader = new FBXLoader();
 
-        // Create placeholder box while loading
+        // Placeholder while loading
         const placeholderGeometry = this.createGeometry(this.selectedShape);
         const placeholderMaterial = new THREE.MeshStandardMaterial({
             color: this.getPreviewColor(this.selectedShape),
@@ -123,35 +105,29 @@ export class ObjectManager {
 
         console.log(`Loading FBX preview: ${objectType.fbxMeshPath}`);
 
-        // Load FBX model
         loader.load(
             objectType.fbxMeshPath,
             (fbx) => {
-                // Remove placeholder
                 if (this.previewObject && this.previewObject.geometry) {
                     this.scene.remove(this.previewObject);
                     this.previewObject.geometry.dispose();
                     this.previewObject.material.dispose();
                 }
 
-                // Setup FBX as preview object (apply GAME_SCALE)
                 const scaledScale = objectType.fbxScale.clone().multiplyScalar(GAME_SCALE);
                 fbx.scale.copy(scaledScale);
 
-                // Make it semi-transparent for preview while preserving textures
+                // Apply preview transparency
                 fbx.traverse((child) => {
                     if (child.isMesh) {
-                        // Handle both single materials and material arrays
                         const materials = Array.isArray(child.material) ? child.material : [child.material];
 
                         materials.forEach((mat, index) => {
                             if (mat) {
-                                // Clone to avoid modifying cached FBX materials
                                 const clonedMat = mat.clone();
                                 clonedMat.transparent = true;
                                 clonedMat.opacity = 0.5;
 
-                                // Only tint if no diffuse texture
                                 if (!clonedMat.map) {
                                     clonedMat.color.setHex(this.getPreviewColor(this.selectedShape));
                                 }
@@ -170,30 +146,22 @@ export class ObjectManager {
                 this.previewObject.userData.isFBXModel = true;
                 this.scene.add(this.previewObject);
 
-                console.log(`✓ FBX preview loaded: ${objectType.fbxMeshPath}`);
+                console.log(`FBX preview loaded: ${objectType.fbxMeshPath}`);
             },
-            (progress) => {
-                // Loading progress
-            },
+            undefined,
             (error) => {
                 console.error(`Error loading FBX preview:`, error);
-                // Keep using placeholder on error
             }
         );
     }
 
     enterBuildMode() {
         const objectType = createObjectType(this.selectedShape);
-
-        // Reset rotation for new object placement
         this.previewRotation.set(0, 0, 0);
 
-        // Check if this object uses FBX model
         if (objectType.usesFBXModel) {
-            // Load FBX model asynchronously
             this.loadFBXPreview(objectType);
         } else {
-            // Create standard geometry preview
             const geometry = this.createGeometry(this.selectedShape);
             const material = new THREE.MeshStandardMaterial({
                 color: this.getPreviewColor(this.selectedShape),
@@ -204,16 +172,14 @@ export class ObjectManager {
             this.scene.add(this.previewObject);
         }
 
-        // Add preview spotlight light if placing a spotlight
         if (this.selectedShape === 'spotlight') {
             this.previewSpotlight = new THREE.SpotLight(0xffffff, this.spotlightIntensity);
             this.previewSpotlight.angle = Math.PI / 9;
             this.previewSpotlight.penumbra = 0.2;
             this.previewSpotlight.decay = 1;
             this.previewSpotlight.distance = 0;
-            this.previewSpotlight.castShadow = false; // Disable shadows for preview performance
+            this.previewSpotlight.castShadow = false;
 
-            // Create target for spotlight
             this.previewSpotlightTarget = new THREE.Object3D();
             this.previewSpotlight.target = this.previewSpotlightTarget;
 
@@ -236,19 +202,13 @@ export class ObjectManager {
         if (this.previewObject) {
             this.scene.remove(this.previewObject);
 
-            // Handle FBX model cleanup
             if (this.previewObject.userData.isFBXModel) {
-                // Dispose FBX group and all its children
                 this.previewObject.traverse((child) => {
                     if (child.isMesh) {
                         if (child.geometry) child.geometry.dispose();
-
-                        // Handle both single materials and material arrays
                         if (child.material) {
                             if (Array.isArray(child.material)) {
-                                child.material.forEach(mat => {
-                                    if (mat && mat.dispose) mat.dispose();
-                                });
+                                child.material.forEach(mat => mat && mat.dispose && mat.dispose());
                             } else if (child.material.dispose) {
                                 child.material.dispose();
                             }
@@ -256,15 +216,12 @@ export class ObjectManager {
                     }
                 });
             } else {
-                // Regular geometry cleanup
                 if (this.previewObject.geometry) this.previewObject.geometry.dispose();
                 if (this.previewObject.material) this.previewObject.material.dispose();
             }
-
             this.previewObject = null;
         }
 
-        // Remove preview spotlight if it exists
         if (this.previewSpotlight) {
             this.scene.remove(this.previewSpotlight);
             this.previewSpotlight = null;
@@ -286,15 +243,12 @@ export class ObjectManager {
     onWheel(event) {
         event.preventDefault();
 
-        // deltaY > 0 -> scroll down -> decrease distance
-        // deltaY < 0 -> scroll up -> increase distance
         if (event.deltaY < 0) {
             this.previewDistance += this.distanceStep;
         } else {
             this.previewDistance -= this.distanceStep;
         }
 
-        // clamp distance
         this.previewDistance = Math.max(
             this.minPreviewDistance,
             Math.min(this.maxPreviewDistance, this.previewDistance)
@@ -304,7 +258,6 @@ export class ObjectManager {
     }
 
     onContextMenu(event) {
-        // Prevent default right-click context menu in build mode
         event.preventDefault();
     }
 
@@ -313,18 +266,16 @@ export class ObjectManager {
 
         const objectTypeData = createObjectType(this.selectedShape);
 
-        // Q and E keys for Z-axis rotation (roll) - only for regular objects
+        // Z-axis rotation for objects that aren't ground-bound
         if (event.key.toLowerCase() === 'q') {
-            // Don't allow Z-axis rotation for spotlight or ground-placement objects
             if (!objectTypeData.requiresGroundPlacement) {
-                this.previewRotation.z -= this.zRotationStep; // Rotate counter-clockwise
+                this.previewRotation.z -= this.zRotationStep;
                 this.previewObject.rotation.copy(this.previewRotation);
                 event.preventDefault();
             }
         } else if (event.key.toLowerCase() === 'e') {
-            // Don't allow Z-axis rotation for spotlight or ground-placement objects
             if (!objectTypeData.requiresGroundPlacement) {
-                this.previewRotation.z += this.zRotationStep; // Rotate clockwise
+                this.previewRotation.z += this.zRotationStep;
                 this.previewObject.rotation.copy(this.previewRotation);
                 event.preventDefault();
             }
@@ -342,37 +293,24 @@ export class ObjectManager {
 
     getPreviewColor(shape) {
         const objectType = createObjectType(shape);
-        if (!objectType || objectType.previewColor === undefined) {
-            console.warn(`Invalid shape "${shape}" in getPreviewColor, using default`);
-            return 0x00ff00; // Default green
-        }
-        return objectType.previewColor;
+        return (objectType && objectType.previewColor !== undefined) ? objectType.previewColor : 0x00ff00;
     }
 
     getPlacedColor(shape) {
         const objectType = createObjectType(shape);
-        if (!objectType || objectType.color === undefined) {
-            console.warn(`Invalid shape "${shape}" in getPlacedColor, using default`);
-            return 0x8b7355; // Default brown
-        }
-        return objectType.color;
+        return (objectType && objectType.color !== undefined) ? objectType.color : 0x8b7355;
     }
 
     getShapeSize(shape) {
         const objectType = createObjectType(shape);
-        if (!objectType || objectType.size === undefined) {
-            console.warn(`Invalid shape "${shape}" in getShapeSize, using default size`);
-            return 2; // Default size
-        }
-        return objectType.size;
+        return (objectType && objectType.size !== undefined) ? objectType.size : 2;
     }
 
     indexCollidables() {
         this.collidables.length = 0;
         this.scene.traverse(child => {
-            if (!child.isMesh) return;
-            if (child === this.previewObject) return;
-            if (!child.geometry) return;
+            if (!child.isMesh || child === this.previewObject || !child.geometry) return;
+
             if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
             if (!child.geometry.boundingSphere) child.geometry.computeBoundingSphere();
 
@@ -392,7 +330,6 @@ export class ObjectManager {
         const direction = new THREE.Vector3();
         this.camera.getWorldDirection(direction);
 
-        // Create raycaster from camera
         const raycaster = new THREE.Raycaster(
             this.camera.position,
             direction,
@@ -400,13 +337,11 @@ export class ObjectManager {
             this.previewDistance
         );
 
-        // Get all intersections except preview object (and its children if it's an FBX group)
         const intersects = raycaster.intersectObjects(this.scene.children, true)
             .filter(hit => {
-                // Exclude the preview object itself
                 if (hit.object === this.previewObject) return false;
 
-                // For FBX models, exclude all children within the preview object
+                // Handle FBX children
                 if (this.previewObject.userData.isFBXModel) {
                     let parent = hit.object.parent;
                     while (parent) {
@@ -415,20 +350,16 @@ export class ObjectManager {
                     }
                 }
 
-                // Exclude objects marked to ignore raycasting (boundaries, zones, etc.)
                 if (hit.object.userData.ignoreRaycast) return false;
-
                 return true;
             });
 
         let actualDistance = this.previewDistance;
 
-        // If raycast hits something, clamp distance to just before hit
         if (intersects.length > 0) {
             const hitDistance = intersects[0].distance;
             const objectSize = this.getShapeSize(this.selectedShape);
-            // Reduced buffer: just half object size + small gap
-            const buffer = objectSize * 0.5 + 0.2; // reduced from objectSize * 0.5
+            const buffer = objectSize * 0.5 + 0.2;
 
             actualDistance = Math.max(
                 this.minPreviewDistance,
@@ -440,53 +371,41 @@ export class ObjectManager {
             direction.multiplyScalar(actualDistance)
         );
 
-        // Check if object requires ground placement (e.g., Rock3)
+        // Boundary Clamping
         const objectTypeData = createObjectType(this.selectedShape);
-        
-        // Calculate clamping boundaries with buffer
-        // We want objects to be reachable, so they must be inside the fish boundaries
         const objectRadius = (this.getShapeSize(this.selectedShape) / 2) || 1;
-        const safetyMargin = 1.0; // Ensure fish can comfortably reach around it without hitting boundary force
+        const safetyMargin = 1.0;
         const totalBuffer = objectRadius + safetyMargin;
 
-        // Clamp X and Z (applies to all objects)
         position.x = Math.max(-BOUNDARY_HALF_X + totalBuffer, Math.min(BOUNDARY_HALF_X - totalBuffer, position.x));
         position.z = Math.max(-BOUNDARY_HALF_Z + totalBuffer, Math.min(BOUNDARY_HALF_Z - totalBuffer, position.z));
 
         if (objectTypeData.requiresGroundPlacement) {
-            position.y = 0.2; // Clamp to ground level slightly above 0 to avoid z-fighting
+            position.y = 0.2;
         } else {
-             // For floating objects, also clamp Y
-             position.y = Math.max(BOUNDARY_MIN_Y + totalBuffer, Math.min(BOUNDARY_MAX_Y - totalBuffer, position.y));
+            position.y = Math.max(BOUNDARY_MIN_Y + totalBuffer, Math.min(BOUNDARY_MAX_Y - totalBuffer, position.y));
         }
 
         this.previewObject.position.copy(position);
 
-        // Update preview spotlight position and target if it exists
         if (this.previewSpotlight && this.previewSpotlightTarget) {
             this.previewSpotlight.position.copy(position);
             this.previewSpotlight.rotation.copy(this.previewRotation);
 
-            // Update spotlight target based on rotation
             const direction = new THREE.Vector3(0, -1, 0);
             direction.applyEuler(this.previewRotation);
-            const targetDistance = 10 * GAME_SCALE; // Scaled target distance
+            const targetDistance = 10 * GAME_SCALE;
             this.previewSpotlightTarget.position.copy(position).add(direction.multiplyScalar(targetDistance));
         }
     }
 
     onMouseMove(event) {
         if (this.rotationMode && this.previewObject) {
-            // Use movementX/Y from pointer lock for rotation
-            // Check if object requires ground placement (only Y-axis rotation)
             const objectTypeData = createObjectType(this.selectedShape);
 
             if (objectTypeData.requiresGroundPlacement) {
-                // For ground-placed objects (e.g., Rock3): only rotate around Y-axis
                 this.previewRotation.y += event.movementX * this.rotationSensitivity;
-                // Ignore vertical mouse movement (no X-axis rotation)
             } else {
-                // For regular objects: use Y and X axes
                 this.previewRotation.y += event.movementX * this.rotationSensitivity;
                 this.previewRotation.x += event.movementY * this.rotationSensitivity;
             }
@@ -498,76 +417,57 @@ export class ObjectManager {
     }
 
     onMouseClick(event) {
-        // Ignore clicks that just selected an object
         if (this.justSelectedObject) return;
 
-        if (event.button === 0) { // Left click - place object
+        if (event.button === 0) {
             if (!this.buildMode || !this.previewObject) return;
-
             this.placeObject();
-        } else if (event.button === 2) { // Right click - toggle rotation mode
+        } else if (event.button === 2) {
             event.preventDefault();
             this.rotationMode = !this.rotationMode;
             console.log(`Rotation mode: ${this.rotationMode ? 'ON' : 'OFF'}`);
         }
     }
 
-    /**
-     * Handle canvas clicks for selecting placed objects (when not in build mode)
-     */
     onCanvasClick(event) {
-        // Only handle selection when NOT in build mode
         if (this.buildMode) return;
+        if (this.gameState && this.gameState.phase !== 'PREPARATION') return;
 
-        // Only allow selecting objects in preparation phase
-        if (this.gameState && this.gameState.phase !== 'PREPARATION') {
-            return; // Ignore clicks during simulation
-        }
-
-        // Raycast from center of screen (0, 0 in normalized device coordinates)
-        // This selects whatever object is at the center crosshair, not where mouse clicks
         this.mouse.x = 0;
         this.mouse.y = 0;
 
-        // Update raycaster
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
-        // Build array of raycastable objects (meshes only, since raycaster can't intersect lights)
         const raycastTargets = [];
         for (const obj of this.placedObjects) {
             if (obj.userData.type === 'spotlight') {
-                // For spotlights, raycast against the visual cone mesh
                 if (obj.userData.visual) {
                     raycastTargets.push(obj.userData.visual);
                 }
             } else {
-                // For regular objects and FBX models, use the object itself
                 raycastTargets.push(obj);
             }
         }
 
-        // For FBX objects, we need to check recursively since they are Groups with mesh children
-        // Use recursive: true to check all descendants
         const intersects = this.raycaster.intersectObjects(raycastTargets, true);
 
         if (intersects.length > 0) {
             const clickedObject = intersects[0].object;
-
-            // Find the original placed object (might be a parent of the clicked mesh)
             let selectedObject = null;
             let selectedIndex = -1;
 
+            // Identify which placed object was clicked
             for (let i = 0; i < this.placedObjects.length; i++) {
                 const obj = this.placedObjects[i];
 
-                // Check spotlight visual cone (direct match or parent)
+                // Check spotlight
                 if (obj.userData.type === 'spotlight' && obj.userData.visual) {
                     if (obj.userData.visual === clickedObject) {
                         selectedObject = obj;
                         selectedIndex = i;
                         break;
                     }
-                    // Check if clickedObject is a child of the visual cone
+                    // Check children of visual cone
                     let parent = clickedObject.parent;
                     while (parent) {
                         if (parent === obj.userData.visual) {
@@ -580,14 +480,14 @@ export class ObjectManager {
                     if (selectedObject) break;
                 }
 
-                // Direct match
+                // Check direct match
                 if (obj === clickedObject) {
                     selectedObject = obj;
                     selectedIndex = i;
                     break;
                 }
 
-                // Check if clickedObject is a child of this placed object (for FBX groups)
+                // Check FBX descendants
                 if (obj.userData.isFBXModel) {
                     let parent = clickedObject.parent;
                     while (parent) {
@@ -606,17 +506,12 @@ export class ObjectManager {
                 const objectType = selectedObject.userData.type;
                 console.log(`Removing ${objectType} to re-place it...`);
 
-                // Prevent this click from triggering build mode placement
                 event.stopPropagation();
                 this.justSelectedObject = true;
 
-                // Remove the object from the scene first
                 this.removeObject(selectedIndex);
-
-                // Now enter build mode with this object type
                 this.toggleBuildModeWithShape(objectType);
 
-                // Reset flag after a short delay
                 setTimeout(() => {
                     this.justSelectedObject = false;
                 }, 100);
@@ -624,31 +519,24 @@ export class ObjectManager {
         }
     }
 
-    /**
-     * Remove a placed object by index
-     * @param {number} index - Index in placedObjects array
-     */
     removeObject(index) {
         if (index < 0 || index >= this.placedObjects.length) return;
 
         const obj = this.placedObjects[index];
         const objectType = obj.userData.type;
 
-        // Unregister bait from flocking system if it's a bait
         if (objectType === 'bait' && this.sceneManager) {
             this.sceneManager.unregisterBait(obj);
         }
 
-        // Remove boundaries/colliders if they exist (for FBX objects)
         if (obj.userData.boundaries && this.sceneManager) {
             console.log(`Removing ${obj.userData.boundaries.length} boundary collider(s)...`);
             this.sceneManager.removeObstacles(obj.userData.boundaries);
         }
 
-        // Remove from scene
         this.scene.remove(obj);
 
-        // Handle spotlight cleanup
+        // Cleanup spotlights
         if (objectType === 'spotlight') {
             if (obj.userData.visual) {
                 this.scene.remove(obj.userData.visual);
@@ -660,18 +548,14 @@ export class ObjectManager {
             }
         }
 
-        // Handle FBX model cleanup
+        // Cleanup FBX or Geometry
         if (obj.userData.isFBXModel) {
             obj.traverse((child) => {
                 if (child.isMesh) {
                     if (child.geometry) child.geometry.dispose();
-
-                    // Handle both single materials and material arrays
                     if (child.material) {
                         if (Array.isArray(child.material)) {
-                            child.material.forEach(mat => {
-                                if (mat && mat.dispose) mat.dispose();
-                            });
+                            child.material.forEach(mat => mat && mat.dispose && mat.dispose());
                         } else if (child.material.dispose) {
                             child.material.dispose();
                         }
@@ -679,21 +563,14 @@ export class ObjectManager {
                 }
             });
         } else {
-            // Handle regular object cleanup
             if (obj.geometry) obj.geometry.dispose();
             if (obj.material) obj.material.dispose();
         }
 
-        // Remove from collidables
         this.collidables = this.collidables.filter(entry => entry.mesh !== obj);
-
-        // Remove from placedObjects array
         this.placedObjects.splice(index, 1);
-
-        // Return to inventory
         this.inventoryManager.recordRemoval(objectType);
 
-        // Notify inventory change
         if (this.onInventoryChange) {
             this.onInventoryChange();
         }
@@ -701,93 +578,65 @@ export class ObjectManager {
         console.log(`Removed ${objectType}`);
     }
 
-    /**
-     * Handle bait consumption by fish
-     * Called when a fish reaches and consumes a bait
-     * @param {THREE.Mesh} baitObject - The bait object to remove
-     */
     consumeBait(baitObject) {
         const index = this.placedObjects.indexOf(baitObject);
         if (index === -1) return;
 
         const objectType = baitObject.userData.type;
-
-        // Remove from scene
         this.scene.remove(baitObject);
 
-        // Handle cleanup
         if (baitObject.geometry) baitObject.geometry.dispose();
         if (baitObject.material) baitObject.material.dispose();
 
-        // Remove from collidables
         this.collidables = this.collidables.filter(entry => entry.mesh !== baitObject);
-
-        // Remove from placedObjects array
         this.placedObjects.splice(index, 1);
-
-        // Return to inventory
         this.inventoryManager.recordRemoval(objectType);
 
-        // Notify inventory change
         if (this.onInventoryChange) {
             this.onInventoryChange();
         }
 
-        console.log(`✓ Bait consumed by fish and returned to inventory`);
+        console.log(`Bait consumed by fish and returned to inventory`);
     }
 
-    /**
-     * Place an FBX model object and load its boundaries
-     * @param {PlaceableObject} objectTypeData - Object type with FBX configuration
-     */
     placeFBXObject(objectTypeData) {
         const loader = new FBXLoader();
         const position = this.previewObject.position.clone();
         const rotation = this.previewObject.rotation.clone();
         const scale = objectTypeData.fbxScale;
 
-        // Clamp to ground level if required
         if (objectTypeData.requiresGroundPlacement) {
             position.y = 0;
         }
 
         console.log(`Placing FBX object at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
 
-        // Load FBX mesh for placement
         loader.load(
             objectTypeData.fbxMeshPath,
             async (fbx) => {
-                // Setup FBX as placed object (apply GAME_SCALE)
                 const scaledScale = scale.clone().multiplyScalar(GAME_SCALE);
                 fbx.scale.copy(scaledScale);
                 fbx.position.copy(position);
                 fbx.rotation.copy(rotation);
 
-                // Extract textures from the original materials
                 const textures = this.extractTexturesFromFBX(fbx);
 
-                // Create shader materials if shader manager is available
                 if (this.shaderManager) {
                     this.createShaderMaterialsForFBX(fbx, textures);
-
-                    // Apply the current active shader
                     this.applyShaderToFBX(fbx, this.shaderManager.activeShader);
                 } else {
-                    // Fallback: Preserve original materials and textures
+                    // Fallback materials
                     fbx.traverse((child) => {
                         if (child.isMesh) {
-                            // Handle both single materials and material arrays
                             const materials = Array.isArray(child.material) ? child.material : [child.material];
 
                             materials.forEach(mat => {
                                 if (mat) {
-                                    // Keep original textures, adjust properties
                                     mat.metalness = 0.3;
                                     mat.roughness = 0.7;
-                                    mat.transparent = false; // Remove preview transparency
+                                    mat.transparent = false;
                                     mat.opacity = 1.0;
 
-                                    // Only change color if there's no texture map
                                     if (!mat.map) {
                                         mat.color.setHex(this.getPlacedColor(this.selectedShape));
                                     }
@@ -800,7 +649,6 @@ export class ObjectManager {
                     });
                 }
 
-                // Store object type and attributes
                 fbx.userData.type = this.selectedShape;
                 fbx.userData.placedAt = Date.now();
                 fbx.userData.attributes = objectTypeData;
@@ -809,23 +657,19 @@ export class ObjectManager {
                 this.scene.add(fbx);
                 this.placedObjects.push(fbx);
 
-                // Register with SceneManager for shader switching
                 if (this.sceneManager && this.shaderManager) {
                     this.sceneManager.addFBXModel(fbx);
-                    console.log('✓ FBX object registered with shader system');
+                    console.log('FBX object registered with shader system');
                 }
 
-                // Record placement in inventory
                 this.inventoryManager.recordPlacement(this.selectedShape);
 
-                // Notify inventory change
                 if (this.onInventoryChange) {
                     this.onInventoryChange();
                 }
 
-                console.log(`✓ Placed FBX object ${this.selectedShape} #${this.placedObjects.length}`);
+                console.log(`Placed FBX object ${this.selectedShape} #${this.placedObjects.length}`);
 
-                // Load boundaries if available and store reference
                 if (objectTypeData.fbxBoundariesPath && this.sceneManager) {
                     console.log(`Loading boundaries for ${this.selectedShape}...`);
                     try {
@@ -835,58 +679,38 @@ export class ObjectManager {
                             scale,
                             rotation
                         );
-
-                        // Store boundary data in the FBX object for later removal
                         fbx.userData.boundaries = boundaryData;
-                        console.log(`✓ Boundaries loaded and stored for ${this.selectedShape} (${boundaryData.length} colliders)`);
+                        console.log(`Boundaries loaded for ${this.selectedShape} (${boundaryData.length} colliders)`);
                     } catch (error) {
                         console.error(`Error loading boundaries:`, error);
                     }
                 }
             },
-            (progress) => {
-                // Loading progress
-            },
+            undefined,
             (error) => {
                 console.error(`Error placing FBX object:`, error);
             }
         );
     }
 
-    /**
-     * Extract textures from FBX model's original materials
-     * @param {THREE.Group} fbx - The FBX model
-     * @returns {Map<string, THREE.Texture>} Map of mesh UUID to texture
-     */
     extractTexturesFromFBX(fbx) {
         const textures = new Map();
-
         fbx.traverse((child) => {
             if (child.isMesh && child.material) {
-                // Handle both single material and material array
                 const materials = Array.isArray(child.material) ? child.material : [child.material];
-
                 materials.forEach((material) => {
-                    // Check if material has a valid map (texture)
                     if (material.map && material.map.isTexture) {
                         textures.set(child.uuid, material.map);
                     }
                 });
             }
         });
-
         return textures;
     }
 
-    /**
-     * Create shader materials (phong, toon, underwater) for an FBX model
-     * @param {THREE.Group} fbx - The FBX model
-     * @param {Map<string, THREE.Texture>} textures - Map of mesh UUID to texture
-     */
     createShaderMaterialsForFBX(fbx, textures) {
         if (!this.shaderManager) return;
 
-        // Store materials on the model's userData
         fbx.userData.shaderMaterials = {
             phong: new Map(),
             toon: new Map(),
@@ -897,30 +721,21 @@ export class ObjectManager {
             if (child.isMesh) {
                 const texture = textures.get(child.uuid) || null;
 
-                // Create phong material
                 const phongMaterial = this.shaderManager.createShaderMaterial('phong', texture);
                 fbx.userData.shaderMaterials.phong.set(child.uuid, phongMaterial);
 
-                // Create toon material
                 const toonMaterial = this.shaderManager.createShaderMaterial('toon', texture);
                 fbx.userData.shaderMaterials.toon.set(child.uuid, toonMaterial);
 
-                // Create underwater material
                 const underwaterMaterial = this.shaderManager.createShaderMaterial('underwater', texture);
                 fbx.userData.shaderMaterials.underwater.set(child.uuid, underwaterMaterial);
 
-                // Enable shadows
                 child.castShadow = true;
                 child.receiveShadow = true;
             }
         });
     }
 
-    /**
-     * Apply a specific shader to an FBX model
-     * @param {THREE.Group} fbx - The FBX model
-     * @param {string} shaderName - 'phong', 'toon', or 'underwater'
-     */
     applyShaderToFBX(fbx, shaderName) {
         if (!fbx.userData.shaderMaterials || !fbx.userData.shaderMaterials[shaderName]) {
             console.warn('Shader materials not found for FBX model');
@@ -937,13 +752,10 @@ export class ObjectManager {
         });
     }
 
-
     placeObject() {
         if (!this.previewObject) return;
 
-        // Handle spotlight differently from regular objects
         if (this.selectedShape === 'spotlight') {
-            // Create actual THREE.SpotLight
             const spotlight = new THREE.SpotLight(0xffffff, 2.0);
             spotlight.position.copy(this.previewObject.position);
             spotlight.rotation.copy(this.previewObject.rotation);
@@ -954,25 +766,20 @@ export class ObjectManager {
             spotlight.distance = 0;
             spotlight.castShadow = true;
 
-            // Calculate target position based on rotation
-            // Create a direction vector pointing down in local space
             const direction = new THREE.Vector3(0, -1, 0);
-            // Apply the spotlight's rotation to the direction
             direction.applyEuler(this.previewObject.rotation);
-            // Set target at a distance along that direction
             const targetDistance = 10;
             const target = new THREE.Object3D();
             target.position.copy(spotlight.position).add(direction.multiplyScalar(targetDistance));
 
             this.scene.add(target);
             spotlight.target = target;
-
             this.scene.add(spotlight);
             this.scene.add(spotlight.target);
 
             this.sceneManager.lights.spotlight = spotlight;
 
-            // Create a visual indicator (cone mesh) - non-collidable
+            // Visual indicator
             const visualCone = new THREE.Mesh(
                 new THREE.ConeGeometry(0.5, 1.5, 8),
                 new THREE.MeshBasicMaterial({
@@ -985,21 +792,17 @@ export class ObjectManager {
             visualCone.rotation.copy(this.previewObject.rotation);
             this.scene.add(visualCone);
 
-            // Store spotlight with metadata and attributes
             const objectTypeData = createObjectType(this.selectedShape);
             spotlight.userData.type = 'spotlight';
             spotlight.userData.placedAt = Date.now();
             spotlight.userData.visual = visualCone;
             spotlight.userData.target = target;
-            spotlight.userData.attributes = objectTypeData; // Store all attributes
-            spotlight.userData.attributes.lightIntensity = this.spotlightIntensity; // Store actual used intensity
+            spotlight.userData.attributes = objectTypeData;
+            spotlight.userData.attributes.lightIntensity = this.spotlightIntensity;
 
             this.placedObjects.push(spotlight);
-
-            // Record placement in inventory
             this.inventoryManager.recordPlacement(this.selectedShape);
 
-            // Notify inventory change
             if (this.onInventoryChange) {
                 this.onInventoryChange();
             }
@@ -1007,14 +810,11 @@ export class ObjectManager {
             console.log(`Placed spotlight #${this.placedObjects.length}`);
 
         } else {
-            // Check if this is an FBX model or regular geometry
             const objectTypeData = createObjectType(this.selectedShape);
 
             if (objectTypeData.usesFBXModel) {
-                // FBX model placement (even if preview hasn't loaded yet)
                 this.placeFBXObject(objectTypeData);
             } else {
-                // Regular object placement (rocks, etc.)
                 const geometry = this.createGeometry(this.selectedShape);
                 const material = new THREE.MeshStandardMaterial({
                     color: this.getPlacedColor(this.selectedShape),
@@ -1026,12 +826,10 @@ export class ObjectManager {
                 placedObject.position.copy(this.previewObject.position);
                 placedObject.rotation.copy(this.previewObject.rotation);
 
-                // Store object type and attributes for easy querying
                 placedObject.userData.type = this.selectedShape;
                 placedObject.userData.placedAt = Date.now();
-                placedObject.userData.attributes = objectTypeData; // Store all attributes
+                placedObject.userData.attributes = objectTypeData;
 
-                // Enable shadows
                 placedObject.castShadow = true;
                 placedObject.receiveShadow = true;
 
@@ -1043,15 +841,12 @@ export class ObjectManager {
                 this.scene.add(placedObject);
                 this.placedObjects.push(placedObject);
 
-                // Record placement in inventory
                 this.inventoryManager.recordPlacement(this.selectedShape);
 
-                // Notify inventory change
                 if (this.onInventoryChange) {
                     this.onInventoryChange();
                 }
 
-                // Register bait with flocking system if it's a bait
                 if (this.selectedShape === 'bait' && this.sceneManager) {
                     this.sceneManager.registerBait(placedObject);
                 }
@@ -1077,10 +872,6 @@ export class ObjectManager {
         }
     }
 
-    /**
-     * Toggle all spotlights on/off
-     * @returns {boolean} True if spotlights were toggled, false if no spotlights exist
-     */
     toggleAllSpotlights() {
         const spotlights = this.placedObjects.filter(obj => obj.userData.type === 'spotlight');
 
@@ -1089,7 +880,6 @@ export class ObjectManager {
             return false;
         }
 
-        // Toggle all spotlights
         spotlights.forEach(spotlight => {
             spotlight.visible = !spotlight.visible;
             if (spotlight.userData.visual) {
@@ -1104,23 +894,18 @@ export class ObjectManager {
         }
 
         const status = spotlights[0].visible ? 'ON' : 'OFF';
-        console.log(`💡 ${spotlights.length} spotlight(s) toggled ${status}`);
+        console.log(`${spotlights.length} spotlight(s) toggled ${status}`);
         return true;
     }
 
-    /**
-     * Clear all placed objects and reset inventory counts
-     */
     clearAll() {
         this.exitBuildMode();
 
         this.placedObjects.forEach(obj => {
-            // Unregister bait from flocking system if it's a bait
             if (obj.userData.type === 'bait' && this.sceneManager) {
                 this.sceneManager.unregisterBait(obj);
             }
 
-            // Remove boundaries/colliders if they exist (for FBX objects)
             if (obj.userData.boundaries && this.sceneManager) {
                 console.log(`Removing ${obj.userData.boundaries.length} boundary collider(s)...`);
                 this.sceneManager.removeObstacles(obj.userData.boundaries);
@@ -1128,7 +913,6 @@ export class ObjectManager {
 
             this.scene.remove(obj);
 
-            // Handle spotlight cleanup
             if (obj.userData.type === 'spotlight') {
                 if (obj.userData.visual) {
                     this.scene.remove(obj.userData.visual);
@@ -1139,18 +923,13 @@ export class ObjectManager {
                 this.sceneManager.lights.spotlight = null;
             }
 
-            // Handle FBX model cleanup
             if (obj.userData.isFBXModel) {
                 obj.traverse((child) => {
                     if (child.isMesh) {
                         if (child.geometry) child.geometry.dispose();
-
-                        // Handle both single materials and material arrays
                         if (child.material) {
                             if (Array.isArray(child.material)) {
-                                child.material.forEach(mat => {
-                                    if (mat && mat.dispose) mat.dispose();
-                                });
+                                child.material.forEach(mat => mat && mat.dispose && mat.dispose());
                             } else if (child.material.dispose) {
                                 child.material.dispose();
                             }
@@ -1158,73 +937,20 @@ export class ObjectManager {
                     }
                 });
             } else {
-                // Handle regular object cleanup
                 if (obj.geometry) obj.geometry.dispose();
                 if (obj.material) obj.material.dispose();
             }
         });
+
         this.placedObjects = [];
         this.collidables = [];
-
         this.inventoryManager.resetCounts();
         console.log('All objects cleared, inventory reset');
     }
 
     dispose() {
         this.exitBuildMode();
-
-        // Remove canvas click listener
         this.canvas.removeEventListener('click', this.onCanvasClick);
-
-        this.placedObjects.forEach(obj => {
-            // Unregister bait from flocking system if it's a bait
-            if (obj.userData.type === 'bait' && this.sceneManager) {
-                this.sceneManager.unregisterBait(obj);
-            }
-
-            // Remove boundaries/colliders if they exist (for FBX objects)
-            if (obj.userData.boundaries && this.sceneManager) {
-                console.log(`Removing ${obj.userData.boundaries.length} boundary collider(s)...`);
-                this.sceneManager.removeObstacles(obj.userData.boundaries);
-            }
-
-            this.scene.remove(obj);
-
-            // Handle spotlight cleanup
-            if (obj.userData.type === 'spotlight') {
-                if (obj.userData.visual) {
-                    this.scene.remove(obj.userData.visual);
-                    if (obj.userData.visual.geometry) obj.userData.visual.geometry.dispose();
-                    if (obj.userData.visual.material) obj.userData.visual.material.dispose();
-                }
-                if (obj.userData.target) this.scene.remove(obj.userData.target);
-            }
-
-            // Handle FBX model cleanup
-            if (obj.userData.isFBXModel) {
-                obj.traverse((child) => {
-                    if (child.isMesh) {
-                        if (child.geometry) child.geometry.dispose();
-
-                        // Handle both single materials and material arrays
-                        if (child.material) {
-                            if (Array.isArray(child.material)) {
-                                child.material.forEach(mat => {
-                                    if (mat && mat.dispose) mat.dispose();
-                                });
-                            } else if (child.material.dispose) {
-                                child.material.dispose();
-                            }
-                        }
-                    }
-                });
-            } else {
-                // Handle regular object cleanup
-                if (obj.geometry) obj.geometry.dispose();
-                if (obj.material) obj.material.dispose();
-            }
-        });
-        this.placedObjects = [];
-        this.collidables = [];
+        this.clearAll();
     }
 }
