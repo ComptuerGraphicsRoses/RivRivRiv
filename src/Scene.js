@@ -951,29 +951,57 @@ export class SceneManager {
         console.log(`✓ Removed ${removedCount} obstacle(s) from flocking system`);
     }
 
-    spawnPredator = (position = new THREE.Vector3(0, 2, 0)) => {
-        const predator = new Predator(position);
+    spawnPredator = async (position = new THREE.Vector3(0, 2, 0)) => {
+        const loader = new FBXLoader();
+        const sharkScale = new THREE.Vector3(0.003, 0.003, 0.0015);
 
-        // 🦈 Mesh
-        const geometry = new THREE.ConeGeometry(0.4, 1.5, 12);
-        geometry.rotateX(-Math.PI / 2);
+        return new Promise((resolve, reject) => {
+            loader.load(
+                '../assets/models/Shark.fbx',
+                (fbx) => {
+                    const predator = new Predator(position);
 
-        const material = new THREE.MeshStandardMaterial({
-            color: 0x888888,
-            roughness: 0.4,
-            metalness: 0.6
+                    // Clone the FBX model for this predator
+                    const sharkMesh = fbx.clone();
+                    const scaledScale = sharkScale.clone().multiplyScalar(GAME_SCALE);
+                    sharkMesh.scale.copy(scaledScale);
+                    sharkMesh.position.copy(position);
+
+                    // Rotate to point forward (adjust if needed based on model orientation)
+                    sharkMesh.rotation.y = Math.PI / 2;
+
+                    // Extract textures from THIS cloned mesh
+                    const textures = this.extractTexturesFromModel(sharkMesh);
+
+                    // Create shader materials for the shark (phong and toon)
+                    this.createShaderMaterialsForModel(sharkMesh, textures);
+
+                    // Apply the active shader
+                    if (this.shaderManager) {
+                        this.applyShaderToModel(sharkMesh, this.shaderManager.activeShader);
+                    }
+
+                    // Store model reference for shader switching
+                    this.fbxModels.push(sharkMesh);
+
+                    sharkMesh.castShadow = true;
+                    predator.mesh = sharkMesh;
+
+                    this.scene.add(sharkMesh);
+                    this.predators.push(predator);
+
+                    console.log('✓ Predator (Shark) spawned');
+                    resolve(predator);
+                },
+                (progress) => {
+                    // Loading progress
+                },
+                (error) => {
+                    console.error('Error loading Shark.fbx:', error);
+                    reject(error);
+                }
+            );
         });
-
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.castShadow = true;
-        mesh.position.copy(position);
-
-        predator.mesh = mesh;
-
-        this.scene.add(mesh);
-        this.predators.push(predator);
-
-        console.log('✓ Predator spawned');
     }
 
     /**

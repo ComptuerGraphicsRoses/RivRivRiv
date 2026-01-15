@@ -203,7 +203,7 @@ class FlockingFrenzy {
         // Spawn predators from level config
         if (predatorConfig && predatorConfig.spawns) {
             for (const spawn of predatorConfig.spawns) {
-                this.sceneManager.spawnPredator(spawn.position);
+                await this.sceneManager.spawnPredator(spawn.position);
             }
         }
 
