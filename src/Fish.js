@@ -4,7 +4,7 @@
  */
 
 import {
-    BOUNDARY_HALF_X, 
+    BOUNDARY_HALF_X,
     BOUNDARY_MIN_Y,
     BOUNDARY_MAX_Y,
     BOUNDARY_HALF_Z,
@@ -119,6 +119,9 @@ export class Fish {
             // Calculate target rotation
             const matrix = new THREE.Matrix4();
             matrix.lookAt(this.position, target, this.up);
+            const rotationY = new THREE.Matrix4();
+            rotationY.makeRotationY(Math.PI / 2);
+            matrix.multiply(rotationY);
             const targetRotation = new THREE.Quaternion();
             targetRotation.setFromRotationMatrix(matrix);
 

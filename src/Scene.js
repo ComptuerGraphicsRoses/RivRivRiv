@@ -358,13 +358,14 @@ export class SceneManager {
      * (Wrapper function using generic loadFBXMesh)
      */
     loadRockMesh = async () => {
-        const ROCK_POSITION = new THREE.Vector3(10, 0, 10);
+        const ROCK_POSITION = new THREE.Vector3(0, 0, 0);
         const ROCK_SCALE = new THREE.Vector3(0.01, 0.01, 0.01);
 
         return this.loadFBXMesh(
-            '../assets/models/kaya1.fbx',
+            '../assets/models/koifish.fbx',
             ROCK_POSITION,
-            ROCK_SCALE
+            ROCK_SCALE,
+            new THREE.Euler(0, Math.PI / 2, 0)
         );
     }
 
@@ -508,10 +509,10 @@ export class SceneManager {
         this.lights.directional.target.position.set(0, 0, 0);
         this.lights.directional.castShadow = true;
         this.scene.add(this.lights.directional);
-        
+
         // const helper = new THREE.DirectionalLightHelper(this.lights.directional, 5);
         // this.scene.add(helper);
-        
+
         // Spotlight (BBM 412 requirement)
         // this.lights.spotlight = new THREE.SpotLight(0xffffff, 2.0);
         // this.lights.spotlight.position.set(0, 10, 0);
@@ -625,13 +626,13 @@ export class SceneManager {
 
         const boundaryBox = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
         boundaryBox.position.set(0, centerY, 0);
-        
+
         // Initial visibility based on debug flag
         boundaryBox.visible = this.isDebugViewEnabled;
-        
+
         this.scene.add(boundaryBox);
         this.debugMeshes.push(boundaryBox);
-        
+
         console.log(`✓ Boundary visualization created: ${width}x${height}x${depth} at (0, ${centerY.toFixed(2)}, 0)`);
     }
 
@@ -707,55 +708,87 @@ export class SceneManager {
      * @param {THREE.Vector3} spawnPosition - Center position for spawning
      * @param {THREE.Vector3} spawnSpread - Random spread area (x, y, z)
      */
-    spawnFishSchool = (count = 50, spawnPosition = new THREE.Vector3(0, 2, 0), spawnSpread = new THREE.Vector3(5, 2, 5)) => {
-        const fishGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
-        fishGeometry.rotateX(Math.PI * -0.5); // Point forward
+    spawnFishSchool = async (count = 50, spawnPosition = new THREE.Vector3(0, 2, 0), spawnSpread = new THREE.Vector3(5, 2, 5)) => {
+        const loader = new FBXLoader();
+        const fishScale = new THREE.Vector3(0.01, 0.01, 0.01);
 
-        const fishMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4a90e2,
-            roughness: 0.6,
-            metalness: 0.4,
-            emissive: 0x1a3a5a,
-            emissiveIntensity: 0.2
-        });
+        // Load the koi fish model once and clone it for each fish
+        return new Promise((resolve, reject) => {
+            loader.load(
+                '../assets/models/koifish.fbx',
+                (fbx) => {
+                    console.log('✓ koifish.fbx model loaded for spawning');
 
-        for (let i = 0; i < count; i++) {
-            // Create fish entity
-            const fish = new Fish();
+                    // Extract textures from the base model
+                    const textures = this.extractTexturesFromModel(fbx);
 
-            // Random spawn position within spread area
-            fish.position.set(
-                spawnPosition.x + (Math.random() - 0.5) * spawnSpread.x,
-                spawnPosition.y + (Math.random() - 0.5) * spawnSpread.y,
-                spawnPosition.z + (Math.random() - 0.5) * spawnSpread.z
-            );
+                    for (let i = 0; i < count; i++) {
+                        // Create fish entity
+                        const fish = new Fish();
 
-            // Random initial velocity
-            fish.velocity.set(
-                -0.5 + Math.random(),
-                -0.2 + Math.random() * 0.4,
-                -0.5 + Math.random()
-            );
+                        // Random spawn position within spread area
+                        fish.position.set(
+                            spawnPosition.x + (Math.random() - 0.5) * spawnSpread.x,
+                            spawnPosition.y + (Math.random() - 0.5) * spawnSpread.y,
+                            spawnPosition.z + (Math.random() - 0.5) * spawnSpread.z
+                        );
 
-            // Create mesh
-            const mesh = new THREE.Mesh(fishGeometry, fishMaterial.clone());
-            mesh.castShadow = true;
-            fish.setMesh(mesh);
-            this.scene.add(mesh);
+                        //fish.rotation.set(0, Math.PI / 2, 0);
 
-            // Set death callback
-            fish.onDeath = () => {
-                if (this.onFishDeath) {
-                    this.onFishDeath();
+                        // Random initial velocity
+                        fish.velocity.set(
+                            -0.5 + Math.random(),
+                            -0.2 + Math.random() * 0.4,
+                            -0.5 + Math.random()
+                        );
+
+                        // Clone the FBX model for this fish
+                        const fishMesh = fbx.clone();
+                        const scaledScale = fishScale.clone().multiplyScalar(GAME_SCALE);
+                        fishMesh.scale.copy(scaledScale);
+
+                        // Rotate to point forward (like the cone did)
+                        fishMesh.rotation.y = Math.PI / 2;
+
+                        // Create shader materials for the fish (phong and toon)
+                        this.createShaderMaterialsForModel(fishMesh, textures);
+
+                        // Apply the active shader
+                        if (this.shaderManager) {
+                            this.applyShaderToModel(fishMesh, this.shaderManager.activeShader);
+                        }
+
+                        // Store model reference for shader switching
+                        this.fbxModels.push(fishMesh);
+
+                        fishMesh.castShadow = true;
+                        fish.setMesh(fishMesh);
+                        this.scene.add(fishMesh);
+
+                        // Set death callback
+                        fish.onDeath = () => {
+                            if (this.onFishDeath) {
+                                this.onFishDeath();
+                            }
+                        };
+
+                        // Add to flocking system
+                        this.flockingSystem.addFish(fish);
+                        this.fish.push(fish);
+                    }
+
+                    console.log(`✓ Spawned ${count} fish at (${spawnPosition.x.toFixed(2)}, ${spawnPosition.y.toFixed(2)}, ${spawnPosition.z.toFixed(2)})`);
+                    resolve();
+                },
+                (progress) => {
+                    // Loading progress
+                },
+                (error) => {
+                    console.error('Error loading koifish.fbx:', error);
+                    reject(error);
                 }
-            };
-
-            // Add to flocking system
-            this.flockingSystem.addFish(fish);
-            this.fish.push(fish);
-        }
-
-        console.log(`✓ Spawned ${count} fish at (${spawnPosition.x.toFixed(2)}, ${spawnPosition.y.toFixed(2)}, ${spawnPosition.z.toFixed(2)})`);
+            );
+        });
     }
 
     /**
@@ -879,7 +912,7 @@ export class SceneManager {
             wireframeMesh.visible = this.isDebugViewEnabled;
             this.debugMeshes.push(wireframeMesh);
         }
-        
+
         // Return both obstacle and wireframe for later removal
         return {
             obstacle: obstacle,
@@ -1304,11 +1337,11 @@ export class SceneManager {
      */
     toggleDebugView = () => {
         this.isDebugViewEnabled = !this.isDebugViewEnabled;
-        
+
         this.debugMeshes.forEach(mesh => {
             if (mesh) mesh.visible = this.isDebugViewEnabled;
         });
-        
+
         console.log(`Debug view ${this.isDebugViewEnabled ? 'enabled' : 'disabled'}`);
         return this.isDebugViewEnabled;
     }

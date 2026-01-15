@@ -187,14 +187,14 @@ class FlockingFrenzy {
     /**
      * Called when simulation starts - spawn fish and predators
      */
-    onSimulationStart() {
+    async onSimulationStart() {
         console.log('Spawning fish and predators...');
 
         const fishConfig = this.currentLevelConfig.fishConfig;
         const predatorConfig = this.currentLevelConfig.predatorConfig;
 
         // Spawn fish school from level config
-        this.sceneManager.spawnFishSchool(
+        await this.sceneManager.spawnFishSchool(
             fishConfig.count,
             fishConfig.spawnPosition,
             fishConfig.spawnSpread
