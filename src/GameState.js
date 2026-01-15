@@ -156,6 +156,9 @@ export class GameState {
         // Fish dies when reaching goal (calls onDeath which decreases fishAlive)
         // But we compensate by adding 1 back, so fishAlive only decreases for real deaths
         this.fishAlive++;
+        
+        // Reward points for saving a fish
+        this.score += 3;
     }
 
     update = (deltaTime) => {
