@@ -38,6 +38,8 @@ export class CameraController {
         this.isPointerLocked = false;
 
         this.isAnimating = false;
+        this.isReturning = false; // Track if we're returning from names scene
+        this.atNamesScene = false; // Track if we're currently stationed at names scene
         this.animationProgress = 0;
         this.savedPosition = null;
         this.savedRotation = null;
@@ -60,8 +62,8 @@ export class CameraController {
         });
 
         document.addEventListener('mousemove', (event) => {
-            if (this.isPointerLocked && !this.isAnimating) {
-                // Prevent camera look if interacting with objects
+            if (this.isPointerLocked && !this.isAnimating && !this.isReturning && !this.atNamesScene) {
+                // Skip camera rotation if ObjectManager is in rotation mode
                 if (this.objectManager && this.objectManager.rotationMode) {
                     return;
                 }
@@ -109,8 +111,23 @@ export class CameraController {
 
     animateToNamesScene = () => {
         if (this.isAnimating) {
-            this.isAnimating = false;
+            // Animation is in progress, do nothing (wait for it to complete)
+            return;
+        }
+
+        if (this.isReturning) {
+            // Return animation is in progress, do nothing
+            return;
+        }
+
+        // Check if we're already at the names scene
+        if (this.atNamesScene) {
+            // Start return animation
+            console.log('Returning to original position...');
+            this.isReturning = true;
             this.animationProgress = 0;
+            this.atNamesScene = false;
+            // savedPosition and savedRotation are already stored
         } else {
             this.savedPosition = this.camera.position.clone();
             this.savedRotation = new THREE.Euler().copy(this.camera.rotation);
@@ -121,23 +138,58 @@ export class CameraController {
     }
 
     updateCameraAnimation = (deltaTime) => {
-        if (!this.isAnimating) return;
+        if (!this.isAnimating && !this.isReturning) return;
 
         // 2 second duration
         const animationSpeed = 0.5;
         this.animationProgress += deltaTime * animationSpeed;
 
-        if (this.animationProgress >= 1.0) {
+        // Clamp to 1.0
+        if (this.animationProgress > 1.0) {
             this.animationProgress = 1.0;
         }
 
         const t = this.smoothstep(this.animationProgress);
 
-        this.camera.position.lerpVectors(this.savedPosition, this.targetPosition, t);
+        if (this.isReturning) {
+            // Interpolate from target back to saved position (reverse)
+            this.camera.position.lerpVectors(this.targetPosition, this.savedPosition, t);
+            
+            // Interpolate rotation (reverse)
+            const targetQuat = new THREE.Quaternion().setFromEuler(this.targetRotation);
+            const savedQuat = new THREE.Quaternion().setFromEuler(this.savedRotation);
+            this.camera.quaternion.slerpQuaternions(targetQuat, savedQuat, t);
 
-        const currentQuat = new THREE.Quaternion().setFromEuler(this.savedRotation);
-        const targetQuat = new THREE.Quaternion().setFromEuler(this.targetRotation);
-        this.camera.quaternion.slerpQuaternions(currentQuat, targetQuat, t);
+            // Check if animation is complete
+            if (this.animationProgress >= 1.0) {
+                // Restore pitch and yaw from saved rotation
+                this.pitch = this.savedRotation.x;
+                this.yaw = this.savedRotation.y;
+                
+                // Return animation complete - reset state
+                console.log('Return animation complete');
+                this.isReturning = false;
+                this.savedPosition = null;
+                this.savedRotation = null;
+            }
+        } else {
+            // Interpolate from saved to target position (forward)
+            this.camera.position.lerpVectors(this.savedPosition, this.targetPosition, t);
+
+            // Interpolate rotation (forward)
+            const currentQuat = new THREE.Quaternion().setFromEuler(this.savedRotation);
+            const targetQuat = new THREE.Quaternion().setFromEuler(this.targetRotation);
+            this.camera.quaternion.slerpQuaternions(currentQuat, targetQuat, t);
+
+            // Check if animation is complete
+            if (this.animationProgress >= 1.0) {
+                // Forward animation complete - stay at names scene
+                console.log('Names scene animation complete');
+                this.isAnimating = false;
+                this.atNamesScene = true; // Mark that we're now stationed at names scene
+                // Don't update pitch/yaw here - we want to stay looking down
+            }
+        }
     }
 
     smoothstep = (t) => {
@@ -145,11 +197,18 @@ export class CameraController {
     }
 
     update = (deltaTime) => {
-        if (this.isAnimating) {
+        // Handle animation if active
+        if (this.isAnimating || this.isReturning) {
             this.updateCameraAnimation(deltaTime);
             return;
         }
 
+        // Don't allow manual control when stationed at names scene
+        if (this.atNamesScene) {
+            return;
+        }
+
+        // Apply rotation
         this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
 
         const direction = new THREE.Vector3();
