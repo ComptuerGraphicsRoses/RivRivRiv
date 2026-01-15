@@ -27,11 +27,11 @@ export class UIManager {
         this.inventorySlotsContainer = document.getElementById('inventory-slots');
 
         this.itemMetadata = {
-            rock1: { name: 'Small Rock', icon: '🪨', keybind: '3' },
-            rock2: { name: 'Big Rock', icon: '🗿', keybind: '4' },
-            rock3: { name: 'Large Coral', icon: '🪸', keybind: '5' },
-            bait: { name: 'Bait', icon: '🪝', keybind: '6' },
-            spotlight: { name: 'Spotlight', icon: '💡', keybind: '7' }
+            rock1: { name: 'Small Rock', icon: '🪨', keybind: '1' },
+            rock2: { name: 'Big Rock', icon: '🗿', keybind: '2' },
+            rock3: { name: 'Large Coral', icon: '🪸', keybind: '3' },
+            bait: { name: 'Bait', icon: '🪝', keybind: '4' },
+            spotlight: { name: 'Spotlight', icon: '💡', keybind: '5' }
         };
     }
 

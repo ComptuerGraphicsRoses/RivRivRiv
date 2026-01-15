@@ -300,35 +300,35 @@ class FlockingFrenzy {
                 this.gameState.togglePause();
                 break;
             case '1':
+                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('rock1');
+                break;
+
+            case '2':
+                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('rock2');
+                break;
+
+            case '3':
+                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('rock3');
+                break;
+
+            case '4':
+                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('bait');
+                break;
+
+            case '5':
+                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('spotlight');
+                break;
+
+            case '6':
                 this.shaderManager.setActiveShader('phong');
                 this.sceneManager.updateShader(this.shaderManager);
                 console.log('Switched to Phong shader');
                 break;
 
-            case '2':
+            case '7':
                 this.shaderManager.setActiveShader('underwater');
                 this.sceneManager.updateShader(this.shaderManager);
                 console.log('Switched to Underwater shader');
-                break;
-
-            case '3':
-                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('rock1');
-                break;
-
-            case '4':
-                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('rock2');
-                break;
-
-            case '5':
-                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('rock3');
-                break;
-
-            case '6':
-                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('bait');
-                break;
-
-            case '7':
-                if (this.objectManager) this.objectManager.toggleBuildModeWithShape('spotlight');
                 break;
 
             case '8':
