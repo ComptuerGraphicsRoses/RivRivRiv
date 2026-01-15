@@ -233,7 +233,7 @@ export class CameraController {
         }
 
         // Clamp within game boundaries with floor offset
-        const EXTRA_BUFFER_FOR_CAMERA_TO_NOT_GO_INSIDE_FLOOR = 1 * GAME_SCALE;
+        const EXTRA_BUFFER_FOR_CAMERA_TO_NOT_GO_INSIDE_FLOOR = 0.5 * GAME_SCALE;
         this.camera.position.x = Math.max(-BOUNDARY_HALF_X, Math.min(BOUNDARY_HALF_X, this.camera.position.x));
         this.camera.position.y = Math.max(BOUNDARY_MIN_Y + EXTRA_BUFFER_FOR_CAMERA_TO_NOT_GO_INSIDE_FLOOR, Math.min(BOUNDARY_MAX_Y, this.camera.position.y));
         this.camera.position.z = Math.max(-BOUNDARY_HALF_Z, Math.min(BOUNDARY_HALF_Z, this.camera.position.z));

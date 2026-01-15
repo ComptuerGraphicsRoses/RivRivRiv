@@ -3,7 +3,7 @@ import * as THREE from 'three';
 // Global configuration
 export const GAME_SCALE = 2;
 export const BOUNDARY_HALF_X = 10 * GAME_SCALE;
-export const BOUNDARY_MIN_Y = -0.5 * GAME_SCALE;
+export const BOUNDARY_MIN_Y = 0 * GAME_SCALE;
 export const BOUNDARY_MAX_Y = 5 * GAME_SCALE;
 export const BOUNDARY_HALF_Z = 10 * GAME_SCALE;
 
