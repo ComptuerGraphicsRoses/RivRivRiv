@@ -156,7 +156,7 @@ export class SceneManager {
     }
 
     /**
-     * Create shader materials (phong and toon) for an FBX model
+     * Create shader materials (phong, toon, underwater) for an FBX model
      * @param {THREE.Group} fbx - The FBX model
      * @param {Map<string, THREE.Texture>} textures - Map of mesh UUID to texture
      */
@@ -166,7 +166,8 @@ export class SceneManager {
         // Store materials on the model's userData
         fbx.userData.shaderMaterials = {
             phong: new Map(),
-            toon: new Map()
+            toon: new Map(),
+            underwater: new Map()
         };
 
         fbx.traverse((child) => {
@@ -180,6 +181,10 @@ export class SceneManager {
                 // Create toon material
                 const toonMaterial = this.shaderManager.createShaderMaterial('toon', texture);
                 fbx.userData.shaderMaterials.toon.set(child.uuid, toonMaterial);
+
+                // Create underwater material
+                const underwaterMaterial = this.shaderManager.createShaderMaterial('underwater', texture);
+                fbx.userData.shaderMaterials.underwater.set(child.uuid, underwaterMaterial);
             }
         });
 
@@ -189,7 +194,7 @@ export class SceneManager {
     /**
      * Apply a specific shader to an FBX model
      * @param {THREE.Group} fbx - The FBX model
-     * @param {string} shaderName - 'phong' or 'toon'
+     * @param {string} shaderName - 'phong', 'toon', or 'underwater'
      */
     applyShaderToModel = (fbx, shaderName) => {
         if (!fbx.userData.shaderMaterials || !fbx.userData.shaderMaterials[shaderName]) {

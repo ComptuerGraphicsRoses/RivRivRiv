@@ -397,10 +397,10 @@ class FlockingFrenzy {
                 break;
 
             case '2':
-                // Switch to Toon shader
-                this.shaderManager.setActiveShader('toon');
+                // Switch to Underwater shader
+                this.shaderManager.setActiveShader('underwater');
                 this.sceneManager.updateShader(this.shaderManager);
-                console.log('Switched to Toon shader (cel-shading)');
+                console.log('Switched to Underwater shader (depth fog + color grading)');
                 break;
 
             case '3':
@@ -436,6 +436,13 @@ class FlockingFrenzy {
                 if (this.objectManager) {
                     this.objectManager.toggleBuildModeWithShape('spotlight');
                 }
+                break;
+
+            case '8':
+                // Switch to Toon shader
+                this.shaderManager.setActiveShader('toon');
+                this.sceneManager.updateShader(this.shaderManager);
+                console.log('Switched to Toon shader (cel-shading)');
                 break;
 
             case '+':

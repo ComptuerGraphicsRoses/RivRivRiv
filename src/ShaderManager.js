@@ -21,6 +21,13 @@ export class ShaderManager {
                 material: null,
                 uniforms: null,
                 materials: [] // Track all created materials for this shader
+            },
+            underwater: {
+                vertex: null,
+                fragment: null,
+                material: null,
+                uniforms: null,
+                materials: [] // Track all created materials for this shader
             }
         };
 
@@ -44,6 +51,14 @@ export class ShaderManager {
         this.shaders.toon.vertex = toonVert;
         this.shaders.toon.fragment = toonFrag;
         this.shaders.toon.uniforms = this.createToonUniforms();
+
+        // Load Underwater shaders
+        const underwaterVert = await this.loadShaderFile('./shaders/underwater.vert.glsl');
+        const underwaterFrag = await this.loadShaderFile('./shaders/underwater.frag.glsl');
+
+        this.shaders.underwater.vertex = underwaterVert;
+        this.shaders.underwater.fragment = underwaterFrag;
+        this.shaders.underwater.uniforms = this.createUnderwaterUniforms();
 
         console.log('All shaders loaded successfully');
     }
@@ -120,6 +135,43 @@ export class ShaderManager {
             // Texture support
             map: { value: null },
             hasTexture: { value: false }
+        };
+    }
+
+    createUnderwaterUniforms = () => {
+        return {
+            // Lighting (same as other shaders)
+            ambientColor: { value: new THREE.Color(0x7296DD) },
+            ambientIntensity: { value: 1.5 },
+
+            directionalLightDir: { value: new THREE.Vector3(1, -1, 1).normalize() },
+            directionalLightColor: { value: new THREE.Color(0xffffff) },
+            directionalLightIntensity: { value: 1.0 },
+
+            // Spotlight
+            spotLightPosition: { value: new THREE.Vector3(0, 10, 0) },
+            spotLightDirection: { value: new THREE.Vector3(0, -1, 0) },
+            spotLightColor: { value: new THREE.Color(0xffffff) },
+            spotLightIntensity: { value: 2.0 },
+            spotLightAngle: { value: Math.PI / 6 },
+            spotLightPenumbra: { value: 0.2 },
+            spotLightEnabled: { value: false },
+
+            // Material properties
+            materialColor: { value: new THREE.Color(0xffffff) },
+            materialShininess: { value: 32.0 },
+
+            // Texture support
+            map: { value: null },
+            hasTexture: { value: false },
+
+            // Underwater specific
+            waterColor: { value: new THREE.Color(0x0a3040) },     // Deep water fog color (slightly brighter)
+            shallowColor: { value: new THREE.Color(0x4a9eb8) },   // Shallow water tint
+            fogDensity: { value: 1.2 },                           // Fog intensity multiplier
+            fogStart: { value: 5.0 },                             // Distance where fog starts (closer)
+            fogEnd: { value: 60.0 },                              // Distance where fog is complete
+            colorShift: { value: 0.7 }                            // Color grading intensity (0-1)
         };
     }
 
@@ -255,5 +307,8 @@ export class ShaderManager {
 
         // Update Toon shader and all its materials
         updateShaderUniforms(this.shaders.toon, lights);
+
+        // Update Underwater shader and all its materials
+        updateShaderUniforms(this.shaders.underwater, lights);
     }
 }
